@@ -32,7 +32,6 @@ export default function SignupPage() {
     setLoading(true);
     setError(null);
 
-    // Basic Validation
     if (!formData.name || !formData.username || !formData.email || !formData.password) {
       setError("All fields are required.");
       setLoading(false);
@@ -40,10 +39,10 @@ export default function SignupPage() {
     }
 
     try {
-      // 1. Check if username is available (via backend)
+      // 1. Check username availability
       try {
-        const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`, { 
-          requireAuth: false 
+        const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`, {
+          requireAuth: false
         });
         if (!usernameCheck.available) {
           throw new Error("Username is already taken.");
@@ -51,7 +50,6 @@ export default function SignupPage() {
       } catch (checkErr: any) {
         console.error("Username check failed:", checkErr);
         if (checkErr.message === "Username is already taken.") throw checkErr;
-        // If it's a network error, we might want to proceed or warn. For now, we proceed.
       }
 
       // 2. Sign up with Supabase
@@ -59,18 +57,9 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
       });
-      
-      if (authError) {
-        console.error("Supabase Auth Error:", authError);
-        throw authError;
-      }
+      if (authError) throw authError;
 
-      if (!data.session) {
-        router.push("/verify-email");
-      }
-
-      // 3. Store initial profile data in sessionStorage for the /verify step
-      // The verify step will use this to hit /auth/initialize-profile
+      // 3. Store pending profile
       sessionStorage.setItem("intrst_pending_profile", JSON.stringify({
         name: formData.name,
         username: formData.username,
@@ -78,7 +67,7 @@ export default function SignupPage() {
         timestamp: new Date().getTime()
       }));
 
-      // 4. Redirect to verification or onboarding
+      // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
       if (data?.session) {
         try {
           await apiFetch("/auth/initialize-profile", {
@@ -94,10 +83,23 @@ export default function SignupPage() {
           console.error("Auto-initialization failed:", initErr);
         }
         router.push("/onboarding");
-      } else {
-        // Email confirmation is enabled, redirect to verify
-        router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=signup`);
+        return;
       }
+
+      // 5. Wait then send OTP
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: formData.email,
+        options: { shouldCreateUser: false }
+      });
+      if (otpError) {
+        console.warn("OTP resend skipped:", otpError.message);
+      }
+
+      // 6. Always redirect to verify
+      router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=signup`);
+
     } catch (err: any) {
       console.error("Signup process failed:", err);
       setError(err.message || "An error occurred during signup.");

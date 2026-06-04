@@ -189,6 +189,7 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
   }
 
   try {
+    console.log("Updating profile for:", userId);
     const { data, error } = await supabase
       .from("profiles")
       .update({
@@ -198,6 +199,9 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
       .eq("user_id", userId)
       .select()
       .maybeSingle();
+
+    console.log("Query result:", data);
+    console.log("Query error:", error);
 
     if (error) {
       return res.status(500).json({ error: error.message });
@@ -209,6 +213,7 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
 
     res.json({ message: "Character profile built!", profile: data });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });

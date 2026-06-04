@@ -56,7 +56,7 @@ function VerifyContent() {
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: verifyType,
+        type: "email",
       });
 
       if (verifyError) {
@@ -67,7 +67,9 @@ function VerifyContent() {
         });
         throw verifyError;
       }
-      
+      console.log("✅ OTP verified, session:", data.session);
+      console.log("✅ verifyType:", verifyType);
+      console.log("✅ accessToken:", data.session?.access_token);
       const session = data.session;
       const accessToken = session?.access_token;
 
@@ -102,8 +104,9 @@ function VerifyContent() {
 
       // 5. Check profile status to determine redirection
       try {
+        console.log("⏳ calling /auth/me...");
         const meData = await apiFetch("/auth/me", { token: accessToken });
-
+        console.log("✅ meData:", meData);
         // Determine if onboarding is truly needed
         const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
         
