@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation"; // ← ADDED
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2Icon, ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, Bell, Lock, Shield, UserIcon, Loader2 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { apiFetch } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase"; // ← ADDED
 import { formatDistanceToNow } from "date-fns";
 
 interface ProfileData {
@@ -43,9 +45,6 @@ interface Connection {
   };
 }
 
-
-// Mock data removed in favor of real API calls
-
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
     <button
@@ -59,7 +58,8 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 export default function MyProfilePage() {
   const { user_id, name: contextName, interests: contextInterests, role: contextRole } = useUser();
-  
+  const router = useRouter(); // ← ADDED
+
   const [activeTab, setActiveTab] = useState("Posts");
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
@@ -67,13 +67,20 @@ export default function MyProfilePage() {
   const [following, setFollowing] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ← ADDED: password modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState("");
+
   const [settings, setSettings] = useState({
-    photoVisibility: false,
-    deptVisibility: true,
-    girlsFirst: true,
-    matchNotifs: true,
-    eventReminders: true,
-    messageRequests: false,
+    showPhoto: false,
+    showDepartment: true,
+    showYear: true,
+    allowMessageRequests: false,
+    girlsFirstProtection: true,
+    matchNotifs: true,      // ← add
+    eventReminders: true,   // ← add
   });
 
   const fetchData = useCallback(async () => {
@@ -109,11 +116,81 @@ export default function MyProfilePage() {
   const toggle = (k: keyof typeof settings) => {
     const newSettings = { ...settings, [k]: !settings[k] };
     setSettings(newSettings);
-    // Silent update to backend
     apiFetch(`/profiles/${user_id}`, {
       method: "PUT",
-      body: JSON.stringify({ privacy_settings: newSettings })
+      body: JSON.stringify({ privacy_settings: newSettings, name: profile?.name || contextName, })
     }).catch(console.error);
+  };
+
+  // ← ADDED: change password handler
+  const handleChangePassword = async () => {
+    setPasswordLoading(true);
+    setPasswordMsg("");
+    const timeout = setTimeout(() => {
+      setPasswordLoading(false);
+      setPasswordMsg("Request timed out. Please try again.");
+    }, 8000);
+    try {
+      const { data: {session} } = await supabase.auth.getSession();
+      // console.log("Session before update:", sessionData.session);
+      if (!session) {
+        clearTimeout(timeout);
+        setPasswordMsg("No active session. Please log out and log back in first.");
+        setPasswordLoading(false);
+        return;
+      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      clearTimeout(timeout);
+      // console.log("Update error:", error);
+      // if (error) throw error;
+      // console.log("Session after update:", sessionData.session);
+      // const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setPasswordMsg("Password updated successfully!");
+      setNewPassword("");
+      setPasswordLoading(false);
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordMsg("");
+      }, 1500);
+    } catch (err: any) {
+      clearTimeout(timeout);
+      setPasswordMsg(err.message || "Failed to update password");
+      setPasswordLoading(false);
+    } 
+  };
+
+  // ← ADDED: export data handler
+  const handleExportData = async () => {
+    try {
+      const data = await apiFetch(`/profiles/${user_id}`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `my-data-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
+  };
+
+  // ← ADDED: delete account handler
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This cannot be undone."
+    );
+    if (!confirmed) return;
+    try {
+      console.log("Deleting account for user_id:", user_id);
+      const result = await apiFetch(`/profiles/${user_id}`, { method: "DELETE" });
+      console.log("Delete result:", result);
+      router.push("/");
+    } catch (err: any) {
+      console.log("Delete error:", err);
+      alert(err.message || "Failed to delete account");
+    }
   };
 
   const name = profile?.name || contextName;
@@ -134,6 +211,51 @@ export default function MyProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
+
+      {/* ← ADDED: Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-dmserif text-xl font-bold text-white">Change Password</h3>
+
+            {passwordMsg && (
+              <p className={`text-sm ${passwordMsg.includes("success") ? "text-emerald-400" : "text-red-400"}`}>
+                {passwordMsg}
+              </p>
+            )}
+
+            <input
+              type="password"
+              placeholder="New password (min 6 characters)"
+              className="w-full bg-background border border-border rounded-xl px-4 h-12 text-sm text-white focus:outline-none focus:border-brand"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setNewPassword("");
+                  setPasswordMsg("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-brand hover:opacity-90"
+                onClick={handleChangePassword}
+                disabled={passwordLoading || newPassword.length < 6}
+              >
+                {passwordLoading ? "Updating..." : "Update"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ─── Cover Banner ─── */}
       <div className="h-44 bg-gradient-to-br from-brand/60 via-accent/40 to-brand/60 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:20px_20px] opacity-20" />
@@ -161,7 +283,6 @@ export default function MyProfilePage() {
             {profile?.bio || "Just trying to figure things out."}
           </p>
 
-          {/* Interest Tags */}
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             {interests.map(tag => (
               <span key={tag} className="bg-brand/10 text-brand border border-brand/20 rounded-full px-3 py-1 text-xs font-medium">
@@ -207,7 +328,6 @@ export default function MyProfilePage() {
 
       {/* ─── Tabs ─── */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-8 pb-28">
-        {/* Tab Switcher */}
         <div className="flex bg-card border border-border/50 rounded-2xl p-1 gap-1 mb-6">
           {TABS.map(tab => (
             <button
@@ -224,7 +344,6 @@ export default function MyProfilePage() {
           ))}
         </div>
 
-        {/* Tab Content — only one rendered at a time */}
         {activeTab === "Insights" && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -245,7 +364,6 @@ export default function MyProfilePage() {
                   <h3 className="font-dmserif text-xl font-bold">Engagement Trends</h3>
                   <div className="text-xs font-bold uppercase tracking-widest text-brand">Last 7 Days</div>
                </div>
-               
                <div className="h-48 flex items-end justify-between gap-3 px-2">
                   {[45, 78, 56, 92, 45, 67, 88].map((val, i) => (
                     <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
@@ -282,13 +400,12 @@ export default function MyProfilePage() {
           </div>
         )}
 
-        {/* Tab Content — only one rendered at a time */}
         {activeTab === "Posts" && (
           <div className="space-y-4">
             {userPosts.map((post, i) => (
               <Card key={i} className="p-5 bg-card border-border/50 hover:border-brand/30 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-[10px] font-bold tracking-widest px-3 py-1 rounded-full border border-brand/20 bg-brand/5 text-brand uppercase`}>
+                  <span className="text-[10px] font-bold tracking-widest px-3 py-1 rounded-full border border-brand/20 bg-brand/5 text-brand uppercase">
                     {post.post_type || "POST"}
                   </span>
                   <span className="text-[10px] font-bold text-muted-foreground ml-auto uppercase tracking-tighter">
@@ -379,9 +496,10 @@ export default function MyProfilePage() {
               </div>
               <div className="space-y-2">
                 {[
-                  { key: "photoVisibility" as const, label: "Show my photo to non-connections" },
-                  { key: "deptVisibility" as const, label: "Show my department" },
-                  { key: "girlsFirst" as const, label: "Girls-first protection", desc: "Only people who've interacted with your content can message you first." },
+                  { key: "showPhoto" as const, label: "Show my photo to non-connections" },
+                  { key: "showDepartment" as const, label: "Show my department" },
+                  { key: "girlsFirstProtection" as const, label: "Girls-first protection", desc: "Only people who've interacted with your content can message you first." },
+                  { key: "allowMessageRequests" as const, label: "Message requests" },
                 ].map(({ key, label, desc }) => (
                   <div key={key} className="flex justify-between items-start p-4 bg-card border border-border/50 rounded-xl">
                     <div className="flex-1 pr-4">
@@ -404,7 +522,6 @@ export default function MyProfilePage() {
                 {[
                   { key: "matchNotifs" as const, label: "Match notifications" },
                   { key: "eventReminders" as const, label: "Event reminders" },
-                  { key: "messageRequests" as const, label: "Message requests" },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex justify-between items-center p-4 bg-card border border-border/50 rounded-xl">
                     <p className="font-medium text-white text-sm">{label}</p>
@@ -414,7 +531,7 @@ export default function MyProfilePage() {
               </div>
             </div>
 
-            {/* Club Admin Management (Only for Club role) */}
+            {/* Club Admin Management */}
             {role === 'club' && (
               <div>
                 <div className="flex items-center gap-2 mb-4">
@@ -427,19 +544,18 @@ export default function MyProfilePage() {
                   </p>
                   <div className="space-y-3">
                     <div className="flex gap-2">
-                        <input 
-                          type="email" 
-                          placeholder="admin@student.gitam.edu"
-                          className="flex-1 bg-background/50 border border-border h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-brand"
-                        />
-                        <Button size="sm" className="bg-brand text-white">Add</Button>
+                      <input 
+                        type="email" 
+                        placeholder="admin@student.gitam.edu"
+                        className="flex-1 bg-background/50 border border-border h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-brand"
+                      />
+                      <Button size="sm" className="bg-brand text-white">Add</Button>
                     </div>
-                    {/* Placeholder for list of admins */}
                     <div className="pt-2 border-t border-border/40">
-                       <div className="flex items-center justify-between py-2">
-                          <span className="text-sm text-foreground">You (Owner)</span>
-                          <Badge variant="outline" className="text-[10px] uppercase">Owner</Badge>
-                       </div>
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-foreground">You (Owner)</span>
+                        <Badge variant="outline" className="text-[10px] uppercase">Owner</Badge>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -458,9 +574,25 @@ export default function MyProfilePage() {
                     Access Super Admin Dashboard
                   </Link>
                 )}
-                <button className="w-full text-left px-4 py-3.5 text-sm text-foreground hover:bg-muted/30 transition-colors">Change Password</button>
-                <button className="w-full text-left px-4 py-3.5 text-sm text-foreground hover:bg-muted/30 transition-colors">Export My Data</button>
-                <button className="w-full text-left px-4 py-3.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors">Delete Account</button>
+                {/* ← ADDED onClick handlers to all three buttons */}
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="w-full text-left px-4 py-3.5 text-sm text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  Change Password
+                </button>
+                {/* <button
+                  onClick={handleExportData}
+                  className="w-full text-left px-4 py-3.5 text-sm text-foreground hover:bg-muted/30 transition-colors"
+                >
+                  Export My Data
+                </button> */}
+                <button
+                  onClick={handleDeleteAccount}
+                  className="w-full text-left px-4 py-3.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  Delete Account
+                </button>
               </div>
             </div>
           </div>

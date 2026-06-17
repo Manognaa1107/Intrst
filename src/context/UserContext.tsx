@@ -68,7 +68,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (sessionToken) {
         try {
           const { apiFetch } = await import("@/lib/apiClient");
-          const data = await apiFetch("/auth/me");
+          const data = await apiFetch("/auth/me", { token: sessionToken });
           if (data && data.user) {
             setIsLoggedIn(true);
             setEmail(data.user.email || "");

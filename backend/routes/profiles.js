@@ -221,6 +221,8 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
 // DELETE user account
 router.delete("/:userId", verifyAuth, async (req, res) => {
   const { userId } = req.params;
+  console.log("DELETE called for:", userId);  // ← add this
+  console.log("req.user:", req.user);    
 
   // Authorization check
   if (req.user.id !== userId) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { supabase } from "@/lib/supabase"; //*
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -48,18 +49,28 @@ export default function OnboardingPage() {
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
   const [year, setYear] = useState(YEARS[0]);
   const [bio, setBio] = useState("");
+  const [profileImage, setProfileImage] = useState<File | null>(null);//*
+  const [previewUrl, setPreviewUrl] = useState<string>(""); 
   const [clubCategory, setClubCategory] = useState(CLUB_CATEGORIES[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const [privacySettings, setPrivacySettings] = useState({
+  const [privacySettings, setPrivacySettings] = useState(() => {
+    const saved = sessionStorage.getItem("privacy_settings");
+    return saved ? JSON.parse(saved) : {
     showPhoto: false,
     showDepartment: true,
     showYear: true,
     allowMessageRequests: false,
     girlsFirstProtection: true
+    };
   });
-
+  useEffect(() => {
+    sessionStorage.setItem("privacy_settings", JSON.stringify(privacySettings));
+  }, [privacySettings]);
+  useEffect(() => {
+  sessionStorage.removeItem("privacy_settings");
+  }, []);
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag));
@@ -75,6 +86,28 @@ export default function OnboardingPage() {
       if (!user_id) {
         throw new Error("User session not found. Please log in again.");
       }
+      //*
+      let avatarUrl = "";
+
+      if (profileImage) {
+        const fileExt = profileImage.name.split(".").pop();
+        const fileName = `${user_id}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, profileImage);
+        console.log("Upload done, uploadError =", uploadError);
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+
+        avatarUrl = data.publicUrl;
+        console.log("avatarUrl =", avatarUrl);
+      }
 
       let parsedYear = parseInt(year);
       if (isNaN(parsedYear)) parsedYear = 6;
@@ -83,6 +116,7 @@ export default function OnboardingPage() {
         username,
         name,
         bio,
+        ...(avatarUrl && { profile_image_url: avatarUrl }), // only include if not empty
       };
 
       if (role === 'club') {
@@ -95,12 +129,12 @@ export default function OnboardingPage() {
         payload.interests = selectedTags;
         payload.privacy_settings = privacySettings;
       }
-
+      console.log("About to call apiFetch..."); 
       await apiFetch(`/profiles/${user_id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-
+      console.log("apiFetch done, redirecting...");
       setIsLoggedIn(true);
       router.push("/home");
     } catch (err: any) {
@@ -250,7 +284,7 @@ export default function OnboardingPage() {
               <p className="text-muted-foreground">This is how you appear to connections.</p>
             </div>
 
-            <div className="flex justify-center py-2">
+            {/* <div className="flex justify-center py-2">
               <div className="relative group cursor-pointer">
                 <div className="w-28 h-28 rounded-full bg-card border-2 border-dashed border-border flex items-center justify-center overflow-hidden hover:border-brand/50 transition-colors">
                   <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-brand transition-colors">
@@ -259,7 +293,36 @@ export default function OnboardingPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
+              <div className="flex justify-center py-2">
+            <label className="relative group cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                // onChange={(e) => {
+                //   console.log("Selected file:", e.target.files?.[0]);
+                // }
+                onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setProfileImage(file);
+                  setPreviewUrl(URL.createObjectURL(file));
+                }}}
+              />
+
+              <div className="w-28 h-28 rounded-full bg-card border-2 border-dashed border-border flex items-center justify-center overflow-hidden hover:border-brand/50 transition-colors">
+                {previewUrl ? (
+                  <img src={previewUrl} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-brand transition-colors">
+                    <CameraIcon className="w-7 h-7" />
+                    <span className="text-xs font-semibold uppercase tracking-wider">Upload</span>
+                  </div>
+                )}
+              </div>
+            </label>
+          </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
@@ -387,13 +450,12 @@ export default function OnboardingPage() {
                 "What are you actually trying to figure out right now?",
                 "What kind of person do you click with?",
               ].map((q, i) => (
-                 <div key={i} className="space-y-2">
+                <div key={i} className="space-y-2">
                   <label className="text-sm font-medium text-accent/90">{q}</label>
                   <Textarea className="min-h-[90px] bg-card rounded-xl border-border resize-none focus-visible:ring-brand shadow-sm" maxLength={150} />
                 </div>
               ))}
             </div>
-
             <Button className="w-full h-14 bg-brand hover:opacity-90 rounded-xl text-base font-semibold shadow-[0_4px_12px_rgba(194,105,42,0.2)]" onClick={() => setStep(4)}>
               Continue
             </Button>
@@ -424,7 +486,7 @@ export default function OnboardingPage() {
                       {item.desc && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.desc}</p>}
                     </div>
                     <button
-                      onClick={() => setPrivacySettings(prev => ({ ...prev, [item.key]: !isActive }))}
+                      onClick={() => setPrivacySettings((prev: typeof privacySettings) => ({ ...prev, [item.key]: !isActive }))}
                       className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isActive ? "bg-brand" : "bg-muted"}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />

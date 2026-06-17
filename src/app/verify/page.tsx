@@ -72,7 +72,13 @@ function VerifyContent() {
       console.log("✅ accessToken:", data.session?.access_token);
       const session = data.session;
       const accessToken = session?.access_token;
-
+      if (session) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
+      
       // 4. Initialize profile in backend if explicitly signing up
       const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
       
