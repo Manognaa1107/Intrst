@@ -8,6 +8,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Loader2, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/apiClient";
+import { motion } from "framer-motion";
+
+const buttonClickInteraction = {
+  whileHover: { scale: 1.02, y: -1 },
+  whileTap: { scale: 0.98, y: 0 },
+  transition: { type: "spring" as const, stiffness: 400, damping: 15 }
+};
 
 function VerifyContent() {
   const router = useRouter();
@@ -18,6 +25,14 @@ function VerifyContent() {
   const [error, setError] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
   const [verifyType, setVerifyType] = useState<any>("signup");
+  const [countdown, setCountdown] = useState(60);
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timerId = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [countdown]);
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -67,20 +82,17 @@ function VerifyContent() {
         });
         throw verifyError;
       }
-      
+
       const session = data.session;
       const accessToken = session?.access_token;
-
-      // 4. Initialize profile in backend if explicitly signing up
       const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
-      
-      // We only initialize if it's a signup flow AND we have pending data
+
       if (verifyType === 'signup' && pendingProfileStr) {
         try {
           const profileInfo = JSON.parse(pendingProfileStr);
           await apiFetch("/auth/initialize-profile", {
             method: "POST",
-            token: accessToken, // Use fresh token
+            token: accessToken,
             body: JSON.stringify({
               user_id: data.user?.id,
               email: data.user?.email,
@@ -93,22 +105,12 @@ function VerifyContent() {
         }
       }
 
-      // Always clear the pending profile once verification is attempted
       sessionStorage.removeItem("intrst_pending_profile");
-
-      // Small delay to ensure Supabase auth state has propagated if needed 
-      // though we are passing the token explicitly now.
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // 5. Check profile status to determine redirection
       try {
         const meData = await apiFetch("/auth/me", { token: accessToken });
-
-        // Determine if onboarding is truly needed
         const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
-        
-        // If it's a sign-in flow (verifyType is email/magiclink), try to go home by default
-        // unless they are missing a profile entirely.
         const isSigninFlow = verifyType === "email" || verifyType === "magiclink";
 
         if (hasCompletedOnboarding || isSigninFlow) {
@@ -118,7 +120,6 @@ function VerifyContent() {
         }
       } catch (meError) {
         console.error("Failed to fetch profile info during verification:", meError);
-        // Fallback to home if it's a sign-in, onboarding otherwise
         if (verifyType === "email" || verifyType === "magiclink") {
           router.replace("/home");
         } else {
@@ -138,15 +139,12 @@ function VerifyContent() {
     setResendLoading(true);
     setError(null);
     try {
-      
       let resendError;
-      
+
       if (verifyType === "email" || verifyType === "magiclink") {
-        // For login OTP or magiclink, we call signInWithOtp again
         const { error } = await supabase.auth.signInWithOtp({ email });
         resendError = error;
       } else {
-        // For signup, we use resend
         const { error } = await supabase.auth.resend({
           type: verifyType,
           email,
@@ -155,6 +153,7 @@ function VerifyContent() {
       }
 
       if (resendError) throw resendError;
+      setCountdown(60);
       alert("A new code has been sent!");
     } catch (err: any) {
       console.error("Resend failed:", err);
@@ -165,19 +164,26 @@ function VerifyContent() {
   };
 
   return (
-    <Card className="w-full max-w-md z-10 border-zinc-800 bg-zinc-950/50 backdrop-blur-xl shadow-2xl">
-      <CardHeader className="space-y-1 pb-6">
-        <CardTitle className="text-3xl font-bold tracking-tight text-center bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 text-transparent bg-clip-text">
+    <Card className="w-full max-w-[390px] bg-white border border-neutral-200/60 shadow-[0_24px_48px_rgba(0,0,0,0.03)] rounded-[32px] p-6 md:p-8 relative z-10">
+      {/* Centered Emblem Logo */}
+      <div className="text-center mb-5">
+        <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm mx-auto mb-1.5">i</div>
+        <span className="text-xs font-bold tracking-tight text-neutral-400">intrst</span>
+      </div>
+
+      <CardHeader className="space-y-1 pb-6 p-0 text-center">
+        <CardTitle className="text-2xl font-bold tracking-tight text-[#0f0f10] mb-1">
           Verify Email
         </CardTitle>
-        <CardDescription className="text-center text-zinc-400">
+        <CardDescription className="text-neutral-400 text-xs font-semibold leading-relaxed">
           Enter the 6-digit OTP sent to {email || "your email"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="p-0">
         <form onSubmit={handleVerify} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm text-center">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs text-center font-medium">
               {error}
             </div>
           )}
@@ -191,35 +197,49 @@ function VerifyContent() {
               maxLength={6}
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-              className="bg-zinc-900/50 border-zinc-800 focus-visible:ring-indigo-500 text-center tracking-widest text-2xl h-14"
+              className="w-full bg-white border border-[#c5c6cd] focus-visible:border-black focus-visible:ring-black text-center tracking-widest text-2xl h-14 rounded-xl text-black placeholder:text-neutral-300 font-bold outline-none transition-all"
               required
             />
           </div>
 
-          <Button
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium h-12"
-            type="submit"
-            disabled={loading || !otp}
-          >
-            {loading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <>
-                Verify OTP <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
+          <motion.div {...buttonClickInteraction} className="pt-2">
+            <Button
+              className="text-white rounded-full h-11 text-xs font-bold bg-black hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 w-full shadow-sm"
+              type="submit"
+              disabled={loading || !otp}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+              ) : (
+                <>
+                  Verify OTP <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </>
+              )}
+            </Button>
+          </motion.div>
         </form>
       </CardContent>
-      <CardFooter className="flex justify-center border-t border-zinc-800/50 pt-4">
-        <Button 
-          variant="link" 
-          onClick={handleResend}
-          disabled={resendLoading || !email}
-          className="text-zinc-400 hover:text-indigo-400 transition-colors"
-        >
-          {resendLoading ? "Resending..." : "Didn't receive a code? Resend"}
-        </Button>
+
+      <CardFooter className="flex justify-center border-t border-neutral-100 bg-transparent shadow-none pt-5 mt-6 p-0">
+        <div className="text-xs text-neutral-500 font-medium bg-transparent">
+          Didn&apos;t receive a code?{" "}
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendLoading || countdown > 0 || !email}
+            className={`font-bold transition-all bg-transparent ${countdown > 0
+                ? "text-neutral-300 cursor-not-allowed no-underline"
+                : "text-black underline hover:text-neutral-600"
+              }`}
+          >
+            {resendLoading ? "Resending..." : "Resend"}
+          </button>
+          {countdown > 0 && (
+            <span className="ml-1 text-neutral-400">
+              in {countdown}s
+            </span>
+          )}
+        </div>
       </CardFooter>
     </Card>
   );
@@ -227,12 +247,18 @@ function VerifyContent() {
 
 export default function VerifyPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-zinc-100">
-      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
-      
-      <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-indigo-500" />}>
-        <VerifyContent />
-      </Suspense>
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden p-6" style={{ backgroundColor: "#faf9f6" }}>
+      {/* Background Glow Decorations */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute left-[-20%] top-[10%] w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35"></div>
+        <div className="absolute right-[-20%] bottom-[10%] w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35"></div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-md flex flex-col items-center">
+        <Suspense fallback={<Loader2 className="w-6 h-6 animate-spin text-black" />}>
+          <VerifyContent />
+        </Suspense>
+      </div>
     </div>
   );
 }

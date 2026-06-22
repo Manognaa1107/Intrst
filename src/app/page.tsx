@@ -26,13 +26,13 @@ const MotionCard = motion(Card);
 // =========================
 // MOCK DATA & CONFIGS
 // =========================
-const hoverSpringConfig = { type: "spring", stiffness: 300, damping: 20 };
+const hoverSpringConfig = { type: "spring" as const, stiffness: 300, damping: 20 };
 
 // Standard micro-interactions for links & buttons
 const buttonClickInteraction = {
   whileHover: { scale: 1.02, y: -1 },
   whileTap: { scale: 0.98, y: 0 },
-  transition: { type: "spring", stiffness: 400, damping: 15 }
+  transition: { type: "spring" as const, stiffness: 400, damping: 15 }
 };
 
 const communityPills = [

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronLeftIcon, HeartIcon, BellIcon, MessageSquareIcon, SparkleIcon, CheckCircle2Icon, UsersIcon, CalendarDaysIcon } from "lucide-react";
+import { ChevronLeftIcon, BellIcon, MessageSquareIcon, SparkleIcon, CheckCircle2Icon, CalendarDaysIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/context/UserContext";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 
 type Notification = {
   notification_id: string;
@@ -16,23 +17,29 @@ type Notification = {
   created_at: string;
 };
 
+const buttonClickInteraction = {
+  whileHover: { scale: 1.02, y: -1 },
+  whileTap: { scale: 0.98, y: 0 },
+  transition: { type: "spring" as const, stiffness: 400, damping: 15 }
+};
+
 function NotifIcon({ type }: { type: string }) {
   const base = "w-10 h-10 rounded-full flex items-center justify-center shrink-0";
   switch (type) {
     case "message":
-      return <div className={cn(base, "bg-brand/15 border border-brand/20")}><MessageSquareIcon className="w-5 h-5 text-brand" /></div>;
+      return <div className={cn(base, "bg-[#ece9e3] border border-black/5")}><MessageSquareIcon className="w-4 h-4 text-[#505f78]" /></div>;
     case "club_post":
     case "club annoucement":
-      return <div className={cn(base, "bg-accent/15 border border-accent/20")}><BellIcon className="w-5 h-5 text-accent" /></div>;
+      return <div className={cn(base, "bg-[#505f78]/10 border border-[#505f78]/5")}><BellIcon className="w-4 h-4 text-[#505f78]" /></div>;
     case "club_event":
     case "event_invite":
-      return <div className={cn(base, "bg-rose-500/15 border border-rose-500/20")}><CalendarDaysIcon className="w-5 h-5 text-rose-400" /></div>;
+      return <div className={cn(base, "bg-rose-500/10 border border-rose-500/5")}><CalendarDaysIcon className="w-4 h-4 text-rose-600" /></div>;
     case "club_approved":
-      return <div className={cn(base, "bg-emerald-500/15 border border-emerald-500/20")}><CheckCircle2Icon className="w-5 h-5 text-emerald-400" /></div>;
+      return <div className={cn(base, "bg-emerald-500/10 border border-emerald-500/5")}><CheckCircle2Icon className="w-4 h-4 text-emerald-700" /></div>;
     case "system_announcement":
-      return <div className={cn(base, "bg-blue-500/15 border border-blue-500/20")}><SparkleIcon className="w-5 h-5 text-blue-400" /></div>;
+      return <div className={cn(base, "bg-sky-500/10 border border-sky-500/5")}><SparkleIcon className="w-4 h-4 text-sky-700" /></div>;
     default:
-      return <div className={cn(base, "bg-muted")}><BellIcon className="w-5 h-5 text-muted-foreground" /></div>;
+      return <div className={cn(base, "bg-neutral-100 border border-black/5")}><BellIcon className="w-4 h-4 text-neutral-500" /></div>;
   }
 }
 
@@ -122,8 +129,8 @@ export default function NotificationsPage() {
         .from("notifications")
         .update({ is_read: true })
         .eq("notification_id", id);
-      
-      setNotifications(prev => prev.map(n => 
+
+      setNotifications(prev => prev.map(n =>
         n.notification_id === id ? { ...n, is_read: true } : n
       ));
     } catch (err) {
@@ -133,26 +140,26 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24 max-w-2xl mx-auto px-4 sm:px-6 py-6 transition-all duration-500">
+    <div className="min-h-screen pb-24 max-w-2xl mx-auto px-4 sm:px-6 py-6 transition-all duration-500" style={{ backgroundColor: "#faf9f6" }}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <Link href="/home">
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-card text-muted-foreground transition-colors border border-transparent hover:border-border">
+          <motion.button {...buttonClickInteraction} className="border border-black/10 bg-white hover:bg-[#f3f1eb] hover:text-[#505f78] text-neutral-500 transition-all rounded-full h-10 w-10 flex items-center justify-center shadow-sm">
             <ChevronLeftIcon className="w-5 h-5" />
-          </button>
+          </motion.button>
         </Link>
-        <h1 className="text-3xl font-dmserif font-semibold text-white">Notifications</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-[#0f0f10]">Notifications</h1>
         {notifications.some(n => !n.is_read) && (
-          <button 
+          <button
             onClick={markAllRead}
-            className="ml-auto text-xs text-brand hover:text-accent cursor-pointer font-medium transition-colors"
+            className="ml-auto text-xs text-[#505f78] hover:text-black cursor-pointer font-bold transition-colors"
           >
             Mark all read
           </button>
@@ -160,12 +167,12 @@ export default function NotificationsPage() {
       </div>
 
       {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 bg-card rounded-full flex items-center justify-center mb-4 border border-border/50">
-            <BellIcon className="w-8 h-8 text-muted-foreground/30" />
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-white border border-black/5 rounded-3xl p-8 shadow-sm">
+          <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4 border border-black/5">
+            <BellIcon className="w-7 h-7 text-neutral-300" />
           </div>
-          <h3 className="text-lg font-medium text-white">All caught up!</h3>
-          <p className="text-sm text-muted-foreground max-w-[240px] mt-1 text-balance">
+          <h3 className="text-base font-bold text-[#0f0f10]">All caught up!</h3>
+          <p className="text-xs text-neutral-500 max-w-[240px] mt-1 font-semibold">
             We&apos;ll notify you when clubs post something new or your events are updated.
           </p>
         </div>
@@ -174,29 +181,29 @@ export default function NotificationsPage() {
           {notifications.map((notif) => {
             const content = getNotifContent(notif);
             return (
-              <Link 
-                key={notif.notification_id} 
+              <Link
+                key={notif.notification_id}
                 href={content.href}
                 onClick={() => !notif.is_read && markAsRead(notif.notification_id)}
               >
                 <div className={cn(
                   "flex items-center gap-4 p-4 rounded-2xl transition-all cursor-pointer group animate-in fade-in slide-in-from-bottom-2",
                   !notif.is_read
-                    ? "bg-brand/5 border border-brand/10 hover:border-brand/20 hover:bg-brand/10"
-                    : "bg-card border border-border/40 hover:border-border hover:bg-card/80 opacity-80 hover:opacity-100"
+                    ? "bg-white border border-[#505f78]/30 shadow-sm hover:shadow-md"
+                    : "bg-white/70 border border-black/5 hover:border-black/10 hover:bg-white shadow-sm opacity-90 hover:opacity-100"
                 )}>
                   <NotifIcon type={notif.type} />
                   <div className="flex-1 min-w-0">
-                    <p className={cn("text-sm leading-snug", !notif.is_read ? "text-white font-medium" : "text-foreground")}>
+                    <p className={cn("text-sm leading-snug", !notif.is_read ? "text-[#0f0f10] font-bold" : "text-neutral-700 font-medium")}>
                       {content.title}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{content.description}</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-wider">
+                    <p className="text-xs text-neutral-500 mt-0.5 font-semibold line-clamp-1">{content.description}</p>
+                    <p className="text-[10px] text-neutral-400 mt-1 uppercase font-bold tracking-wider">
                       {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
                     </p>
                   </div>
                   {!notif.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-brand shadow-[0_0_8px_rgba(139,139,67,0.8)] shrink-0 animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-[#855300] shadow-[0_0_8px_rgba(133,83,0,0.5)] shrink-0 animate-pulse" />
                   )}
                 </div>
               </Link>

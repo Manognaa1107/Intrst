@@ -16,7 +16,7 @@ import { PersonalityPrompt } from "@/components/PersonalityPrompt";
 const tabs = ["All", "Tips", "Questions", "Events", "Utilities", "Opinions"];
 
 export default function HomePage() {
-  const { user_id, has_completed_personality, setHasCompletedPersonality, role, isAuthLoading } = useUser();
+  const { user_id, has_completed_personality, setHasCompletedPersonality, role, isAuthLoading, interests } = useUser();
   const [activeTab, setActiveTab] = useState("All");
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [postTag, setPostTag] = useState("QUESTION");
@@ -133,7 +133,7 @@ export default function HomePage() {
   const toggleComments = async (postId: string) => {
     const isExpanded = expandedComments.has(postId);
     const newExpanded = new Set(expandedComments);
-    
+
     if (isExpanded) {
       newExpanded.delete(postId);
     } else {
@@ -182,35 +182,33 @@ export default function HomePage() {
 
   const getTagColor = (tag: string) => {
     switch (tag) {
-      case "EVENT": return "bg-brand/10 text-brand border border-brand/20";
-      case "QUESTION": return "bg-accent/10 text-accent border border-accent/20";
-      case "TIP": return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-      case "UTILITY": return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
-      case "OPINION": return "bg-rose-500/10 text-rose-400 border border-rose-500/20";
-      default: return "bg-muted text-muted-foreground";
+      case "EVENT": return "bg-[#505f78]/10 text-[#505f78] border border-[#505f78]/20";
+      case "QUESTION": return "bg-[#855300]/10 text-[#855300] border border-[#855300]/20";
+      case "TIP": return "bg-emerald-600/10 text-emerald-700 border border-emerald-600/20";
+      case "UTILITY": return "bg-blue-600/10 text-blue-700 border border-blue-600/20";
+      case "OPINION": return "bg-rose-600/10 text-rose-700 border border-rose-600/20";
+      default: return "bg-neutral-100 text-neutral-600 border border-black/5";
     }
   };
 
   const filteredPosts = activeTab === "All" ? posts : posts.filter(p => p.post_type === activeTab.toUpperCase().replace(/S$/, ''));
 
   return (
-    <div className="min-h-screen bg-background relative flex flex-col md:flex-row">
+    <div className="w-full min-h-screen bg-background relative flex flex-col md:flex-row overflow-hidden">
       {showPersonalityPrompt && (
-        <PersonalityPrompt 
-          user_id={user_id} 
-          onComplete={() => setHasCompletedPersonality(true)} 
+        <PersonalityPrompt
+          user_id={user_id}
+          onComplete={() => setHasCompletedPersonality(true)}
         />
       )}
-      <div className="flex-1 max-w-2xl mx-auto w-full border-x border-border/40 min-h-screen relative pb-24">
-        {/* Top Header - Mobile */}
+      <div className="flex-1 max-w-full md:max-w-3xl mx-auto w-full min-w-0 border-l border-border/40 min-h-screen relative pb-20 overflow-x-hidden">  {/* Top Header - Mobile */}
         <div className="md:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 pt-[calc(env(safe-area-inset-top)+64px)] px-4 pb-3 overflow-x-auto hide-scrollbar flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
-                activeTab === tab ? 'bg-brand text-white shadow-[0_0_15px_rgba(194,105,42,0.3)]' : 'bg-card text-muted-foreground hover:bg-card/80 border border-border'
-              }`}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/80 text-neutral-500 hover:bg-neutral-100 border border-black/5'
+                }`}
             >
               {tab}
             </button>
@@ -223,9 +221,8 @@ export default function HomePage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-colors ${
-                activeTab === tab ? 'bg-brand text-white shadow-[0_0_15px_rgba(194,105,42,0.3)]' : 'bg-card/50 text-muted-foreground hover:text-white border border-border'
-              }`}
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/80 text-neutral-500 hover:bg-neutral-100 border border-black/5'
+                }`}
             >
               {tab}
             </button>
@@ -234,55 +231,101 @@ export default function HomePage() {
 
         {/* Feed */}
         <div className="p-4 sm:p-6 space-y-4">
-          
+
           {/* Pinned Posts Section (Clubs/Events) - Dynamic Form */}
-          <div className="mb-6 space-y-2">
-             <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Featured Events</span>
-                <Badge variant="outline" className="text-[9px] border-emerald-500/20 bg-emerald-500/5 text-emerald-400 px-1.5 py-0">LIVE</Badge>
-             </div>
-             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-                {eventsLoading ? (
-                  [1, 2, 3].map(i => (
-                    <div key={i} className="min-w-[180px] h-[80px] bg-card/50 border border-border/40 rounded-xl animate-pulse" />
-                  ))
-                ) : featuredEvents.length === 0 ? (
-                  <div className="w-full py-6 bg-card/30 border border-dashed border-border/40 rounded-xl flex items-center justify-center">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">No featured events today</p>
+          <div className="mb-10 space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em]">Featured Events</span>
+              <Badge variant="outline" className="text-[9px] border-emerald-600/20 bg-emerald-500/5 text-emerald-700 px-1.5 py-0">LIVE</Badge>
+            </div>
+            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
+              {eventsLoading ? (
+                <div className="w-full h-[180px] rounded-[32px] border border-dashed border-black/10 bg-white/40 animate-pulse" />
+              ) : featuredEvents.length === 0 ? (
+                <div className="w-full py-10 bg-white/40 border border-dashed border-black/10 rounded-[32px] flex flex-col items-center justify-center text-center px-6">
+
+                  <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-4 text-neutral-300">
+                    📅
                   </div>
-                ) : featuredEvents.map((evt, i) => (
-                   <Link key={evt.event_id} href={`/events/${evt.event_id}`}>
-                     <div className="min-w-[180px] max-w-[180px] bg-card border border-border/40 rounded-xl p-3 flex flex-col gap-2 relative group cursor-pointer hover:border-brand/40 transition-all shadow-sm">
-                        <div className="flex items-center gap-2">
-                           <div className="w-5 h-5 rounded-md bg-brand/10 flex items-center justify-center text-[10px] grayscale group-hover:grayscale-0 transition-all overflow-hidden border border-border/30">
-                              {evt.clubs?.logo_url ? (
-                                <img src={evt.clubs.logo_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                "📅"
-                              )}
-                           </div>
-                           <span className="text-[10px] font-bold text-white/70 group-hover:text-brand transition-colors truncate">
-                              {evt.clubs?.club_name || "Campus Event"}
-                           </span>
+
+                  <p className="text-[11px] text-neutral-400 uppercase tracking-[0.15em] font-bold">
+                    No Featured Events Today
+                  </p>
+
+                </div>
+              ) : (
+                <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-1">
+                  {featuredEvents.map((evt) => (
+                    <Link
+                      key={evt.event_id}
+                      href={`/events/${evt.event_id}`}
+                    >
+                      <div className="min-w-[240px] bg-white border border-black/5 rounded-[24px] p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
+                            {evt.clubs?.logo_url ? (
+                              <img
+                                src={evt.clubs.logo_url}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                📅
+                              </div>
+                            )}
+                          </div>
+
+                          <span className="text-xs font-semibold text-neutral-700 truncate">
+                            {evt.clubs?.club_name || "Campus Event"}
+                          </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug group-hover:text-white transition-colors">
+
+                        <h4 className="text-sm font-semibold text-[#0f0f10] line-clamp-2">
                           {evt.title}
-                        </p>
-                     </div>
-                   </Link>
-                ))}
-             </div>
+                        </h4>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-8 md:block flex items-center justify-between">
             <div>
-               <h1 className="text-3xl font-dmserif font-semibold text-white">Campus Pulse</h1>
-               <p className="text-muted-foreground">What&apos;s happening on campus right now.</p>
+              <h1 className="text-3xl font-dmserif font-semibold text-[#0f0f10]">Campus Pulse</h1>
+              <p className="text-neutral-500">What&apos;s happening on campus right now.</p>
             </div>
             {activeTab !== "All" && (
-                <Badge className="bg-accent/10 text-accent border-accent/20">Showing {activeTab}s</Badge>
+              <Badge className="bg-[#505f78]/10 text-[#505f78] border-[#505f78]/20">Showing {activeTab}s</Badge>
             )}
           </div>
+
+          {/* Fallback prompt banner when no interests selected */}
+          {(!interests || interests.length === 0) && (
+            <Card className="p-6 bg-[#855300]/5 border border-[#855300]/10 rounded-2xl shadow-sm space-y-4 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300] shrink-0">
+                  <span className="text-lg">✨</span>
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-dmserif font-bold text-lg text-[#0f0f10]">Personalize Your Feed</h3>
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    You haven&apos;t selected any interests yet. Setup your interests to see discussions, events, and clubs custom-tailored to your exact vibe!
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 pl-[52px]">
+                <Link href="/profile/me">
+                  <Button className="h-9 px-5 bg-black hover:bg-[#505f78] text-white font-semibold rounded-xl text-xs transition-colors">
+                    Set Interests
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          )}
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -294,18 +337,18 @@ export default function HomePage() {
               <p>No posts yet. Be the first to post something!</p>
             </div>
           ) : filteredPosts.map((post) => (
-            <Card key={post.id} className="p-4 sm:p-5 bg-card border-border/50 glow-hover">
+            <Card key={post.id} className="p-4 sm:p-5 bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all">
               <div className="flex gap-3 mb-3">
                 <Avatar className="w-10 h-10 border border-border">
-                  <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
+                  <AvatarFallback className="bg-neutral-100 text-neutral-600 font-semibold">
                     {post.is_anonymous ? "A" : ((post.profiles?.name || "U")[0])}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold text-white text-sm">{post.is_anonymous ? "Anonymous" : (post.profiles?.name || "Student")}</h4>
-                      <p className="text-xs text-muted-foreground">
+                      <h4 className="font-semibold text-[#0f0f10] text-sm">{post.is_anonymous ? "Anonymous" : (post.profiles?.name || "Student")}</h4>
+                      <p className="text-xs text-neutral-500">
                         {post.is_anonymous ? "Hidden Identity" : (post.profiles?.department || "General")} &middot; {post.is_anonymous ? "Unknown" : (post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member")}
                       </p>
                     </div>
@@ -315,86 +358,87 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              
+
               <p className="text-foreground text-[15px] leading-relaxed mb-4 ml-[52px]">
                 {post.content}
               </p>
-              
-              <div className="flex items-center gap-6 ml-[52px] text-muted-foreground">
-                <button 
+
+              <div className="flex items-center gap-6 ml-[52px] text-neutral-500">
+                <button
                   onClick={() => handleLike(post.id)}
-                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${post.user_has_liked ? 'text-brand' : 'hover:text-brand'}`}
+                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${post.user_has_liked ? 'text-[#855300]' : 'hover:text-black'}`}
                 >
-                  <div className={`p-1.5 rounded-full transition-colors ${post.user_has_liked ? 'bg-brand/10' : 'group-hover:bg-brand/10'}`}>
-                    <ThumbsUpIcon className={`w-4 h-4 ${post.user_has_liked ? 'fill-brand text-brand' : ''}`} />
+                  <div className={`p-1.5 rounded-full transition-colors ${post.user_has_liked ? 'bg-[#855300]/10' : 'group-hover:bg-neutral-100'}`}>
+                    <ThumbsUpIcon className={`w-4 h-4 ${post.user_has_liked ? 'fill-[#855300] text-[#855300]' : ''}`} />
                   </div>
                   {post.likes_count || 0}
                 </button>
-                <button 
+                <button
                   onClick={() => toggleComments(post.id)}
-                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${expandedComments.has(post.id) ? 'text-accent' : 'hover:text-accent'}`}
+                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${expandedComments.has(post.id) ? 'text-[#505f78]' : 'hover:text-black'}`}
                 >
-                  <div className={`p-1.5 rounded-full transition-colors ${expandedComments.has(post.id) ? 'bg-accent/10' : 'group-hover:bg-accent/10'}`}>
+                  <div className={`p-1.5 rounded-full transition-colors ${expandedComments.has(post.id) ? 'bg-[#505f78]/10' : 'group-hover:bg-neutral-100'}`}>
                     <MessageCircleIcon className="w-4 h-4" />
                   </div>
                   {post.post_comments?.[0]?.count || 0}
                 </button>
                 <div className="flex-1"></div>
                 <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
-                <button className="p-1.5 rounded-full hover:bg-muted hover:text-white transition-colors">
+                <button className="p-1.5 rounded-full hover:bg-neutral-100 hover:text-black transition-colors">
                   <BookmarkIcon className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Comment Section */}
               {expandedComments.has(post.id) && (
-                <div className="mt-4 ml-[52px] space-y-4 pt-4 border-t border-border/40 animate-in slide-in-from-top-2 duration-200">
+                <div className="mt-4 ml-[52px] space-y-4 pt-4 border-t border-black/5 animate-in slide-in-from-top-2 duration-200">
                   <div className="flex gap-2">
                     <Avatar className="w-8 h-8 border border-border">
-                      <AvatarFallback className="bg-muted text-[10px] text-muted-foreground">ME</AvatarFallback>
+                      <AvatarFallback className="bg-neutral-100 text-[10px] text-neutral-600">ME</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 flex gap-2">
-                       <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Add a comment..."
                         value={commentInputs[post.id] || ""}
                         onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                        className="flex-1 bg-muted/30 border border-border/50 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand/40 transition-colors"
-                       />
-                       <Button 
-                        size="sm" 
+                        className="flex-1 bg-neutral-50 border border-black/5 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-neutral-300 transition-colors"
+                      />
+                      <Button
+                        size="sm"
                         onClick={() => handleAddComment(post.id)}
                         disabled={!commentInputs[post.id]?.trim()}
-                        className="bg-brand hover:opacity-90 h-8 px-4 text-xs font-bold"
-                       >
+                        className="bg-black text-white hover:bg-[#505f78] h-8 px-4 text-xs font-bold rounded-full"
+                      >
                         Post
-                       </Button>
+                      </Button>
                     </div>
                   </div>
 
                   {commentLoading[post.id] ? (
                     <div className="flex items-center justify-center py-4">
-                      <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   ) : postComments[post.id]?.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-2">No comments yet. Start the conversation!</p>
+                    <p className="text-xs text-neutral-500 text-center py-2">No comments yet. Start the conversation!</p>
                   ) : (
                     <div className="space-y-4">
 
                       {postComments[post.id]?.map((comment) => (
                         <div key={comment.id} className="flex gap-3">
                           <Avatar className="w-7 h-7 border border-border">
-                            <AvatarFallback className="bg-muted text-[9px] text-muted-foreground">
+                            <AvatarFallback className="bg-neutral-100 text-[9px] text-neutral-600">
                               {comment.profiles?.name?.[0] || "?"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <div className="bg-muted/20 rounded-xl p-2 px-3">
-                              <h5 className="text-[11px] font-bold text-white/90">{comment.profiles?.name || "Anonymous"}</h5>
-                              <p className="text-sm text-foreground/90">{comment.comment}</p>
+                            <div className="bg-neutral-50 border border-black/5 rounded-2xl p-2.5 px-3">
+                              <h5 className="text-[11px] font-bold text-[#0f0f10]">{comment.profiles?.name || "Anonymous"}</h5>
+                              <p className="text-sm text-neutral-800">{comment.comment}</p>
                             </div>
-                            <span className="text-[10px] text-muted-foreground ml-2">Just now</span>
+                            <span className="text-[10px] text-neutral-500 ml-2">Just now</span>
+                            <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
                           </div>
                         </div>
                       ))}
@@ -408,9 +452,9 @@ export default function HomePage() {
       </div>
 
       {/* FAB */}
-      <button 
+      <button
         onClick={() => setIsFabOpen(true)}
-        className="fixed bottom-[100px] md:bottom-8 right-4 md:right-8 w-14 h-14 bg-brand hover:opacity-90 active:scale-95 transition-all text-white rounded-full shadow-[0_0_20px_rgba(194,105,42,0.5)] flex items-center justify-center z-40"
+        className="fixed bottom-[100px] md:bottom-8 right-4 md:right-8 w-14 h-14 bg-black hover:bg-[#505f78] active:scale-95 transition-all text-white rounded-full shadow-md flex items-center justify-center z-40"
       >
         <PlusIcon className="w-6 h-6" />
       </button>
@@ -418,59 +462,57 @@ export default function HomePage() {
       {/* Create Post Modal */}
       {isFabOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-card border border-border sm:rounded-2xl rounded-t-2xl shadow-2xl safe-area-bottom animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
-            <div className="flex justify-between items-center p-4 border-b border-border">
-              <h3 className="text-lg font-dmserif font-semibold">Create Post</h3>
-              <button onClick={() => { setIsFabOpen(false); setIsAnonymous(false); }} className="p-2 text-muted-foreground hover:text-white hover:bg-muted rounded-full transition-colors">
+          <div className="w-full max-w-lg bg-white border border-black/5 sm:rounded-2xl rounded-t-2xl shadow-xl safe-area-bottom animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
+            <div className="flex justify-between items-center p-4 border-b border-black/5">
+              <h3 className="text-lg font-dmserif font-semibold text-[#0f0f10]">Create Post</h3>
+              <button onClick={() => { setIsFabOpen(false); setIsAnonymous(false); }} className="p-2 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors">
                 <XIcon className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-4 space-y-4">
               <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
                 {["TIP", "QUESTION", "EVENT", "UTILITY", "OPINION"].map(tag => (
-                  <button 
+                  <button
                     key={tag}
                     onClick={() => setPostTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                      postTag === tag ? getTagColor(tag) + ' shadow-[0_0_10px_currentColor]' : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${postTag === tag ? getTagColor(tag) : 'bg-transparent text-neutral-500 border-black/5 hover:border-neutral-400'
+                      }`}
                   >
                     {tag}
                   </button>
                 ))}
               </div>
 
-              <Textarea 
-                placeholder="What's on your mind?" 
+              <Textarea
+                placeholder="What's on your mind?"
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
-                className="min-h-[150px] bg-background border-none focus-visible:ring-0 text-base resize-none placeholder:text-muted-foreground"
+                className="min-h-[150px] bg-white border border-black/5 rounded-xl p-3 focus-visible:ring-0 text-base resize-none placeholder:text-neutral-400"
               />
 
               {/* Media Upload for Clubs */}
               <div className="flex flex-col gap-3">
-                 <div className="flex items-center gap-2">
-                    <button className={`p-2 rounded-xl border flex items-center gap-2 text-xs font-semibold transiton-all ${role === 'club' ? 'border-brand/40 bg-brand/5 text-brand hover:bg-brand/10' : 'border-border bg-muted/20 text-muted-foreground cursor-not-allowed grayscale'}`}>
-                       <PlusIcon className="w-4 h-4" /> Add Photo/Video
-                    </button>
-                    {role !== 'club' && (
-                        <p className="text-[10px] text-muted-foreground italic">Only clubs can post media for now.</p>
-                    )}
-                 </div>
+                <div className="flex items-center gap-2">
+                  <button className={`p-2 rounded-xl border flex items-center gap-2 text-xs font-semibold transition-all ${role === 'club' ? 'border-[#505f78]/30 bg-[#505f78]/5 text-[#505f78] hover:bg-[#505f78]/10' : 'border-black/5 bg-neutral-50 text-neutral-400 cursor-not-allowed'}`}>
+                    <PlusIcon className="w-4 h-4" /> Add Photo/Video
+                  </button>
+                  {role !== 'club' && (
+                    <p className="text-[10px] text-muted-foreground italic">Only clubs can post media for now.</p>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-between items-center pt-2">
-                <button 
+                <button
                   onClick={() => setIsAnonymous(!isAnonymous)}
-                  className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${isAnonymous ? 'bg-brand text-white border border-brand/20' : 'text-brand hover:bg-brand/10'}`}
+                  className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${isAnonymous ? 'bg-black text-white border border-black/10' : 'text-neutral-700 hover:bg-neutral-100'}`}
                 >
                   <LockIcon className="w-4 h-4" /> {isAnonymous ? 'Posting Anonymously' : 'Anonymous'}
                 </button>
-                <Button 
-                  className={`px-6 rounded-xl font-semibold ${
-                    postTag && postContent.trim() ? 'bg-brand hover:opacity-90 text-white' : 'bg-muted text-muted-foreground cursor-not-allowed'
-                  }`}
+                <Button
+                  className={`px-6 rounded-xl font-semibold ${postTag && postContent.trim() ? 'bg-black text-white hover:bg-[#505f78]' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                    }`}
                   disabled={!postTag || !postContent.trim() || isPosting}
                   onClick={handleCreatePost}
                 >
