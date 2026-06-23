@@ -74,6 +74,7 @@ export default function SignupPage() {
     }
 
     try {
+      // 1. Check username availability
       try {
         const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`, {
           requireAuth: false
@@ -86,10 +87,34 @@ export default function SignupPage() {
         if (checkErr.message === "Username is already taken.") throw checkErr;
       }
 
+      // GITAM email validation
+      const domain = formData.email.split("@")[1]?.toLowerCase();
+
+      const isGitamEmail =
+        domain === "gitam.in" ||
+        domain.endsWith(".gitam.in") ||
+        domain === "gitam.edu" ||
+        domain.endsWith(".gitam.edu");
+
+      // if (!isGitamEmail) {
+      //   setError("Only GITAM email addresses are allowed.");
+      //   setLoading(false);
+      //   return;
+      // }
+      const ADMIN_EMAIL = "vempatapuyoshitha@gmail.com";
+
+      if (!isGitamEmail && formData.email.toLowerCase() !== ADMIN_EMAIL) {
+        setError("Only GITAM email addresses are allowed.");
+        setLoading(false);
+        return;
+      }
+      
+      // 2. Sign up with Supabase
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
+      if (authError) throw authError;
 
       console.log("Signup Data:", data);
       console.log("Signup Error:", authError);
@@ -103,6 +128,7 @@ export default function SignupPage() {
         timestamp: new Date().getTime()
       }));
 
+      // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
       if (data?.session) {
         try {
           await apiFetch("/auth/initialize-profile", {
@@ -120,27 +146,22 @@ export default function SignupPage() {
 
         router.push("/onboarding");
         return;
-      }
+// 5. Wait then send OTP
+await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Wait before sending OTP
-      await new Promise(resolve => setTimeout(resolve, 2000));
+const { error: otpError } = await supabase.auth.signInWithOtp({
+  email: formData.email,
+  options: { shouldCreateUser: false }
+});
 
-      // Send OTP
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: formData.email,
-        options: {
-          shouldCreateUser: false,
-        },
-      });
+if (otpError) {
+  console.warn("OTP resend skipped:", otpError.message);
+}
 
-      if (otpError) {
-        console.warn("OTP resend skipped:", otpError.message);
-      }
-
-      // Redirect to verification page
-      router.push(
-        `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
-      );
+// 6. Always redirect to verify
+router.push(
+  `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
+);
     } catch (err: any) {
       console.error("Signup process failed:", err);
       setError(err.message || "An error occurred during signup.");

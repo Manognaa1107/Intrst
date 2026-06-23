@@ -9,7 +9,6 @@ export const verifyAuth = async (req, res, next) => {
   try {
     const token = authHeader.replace("Bearer ", "");
     const { data, error } = await supabase.auth.getUser(token);
-
     if (error || !data.user) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -26,14 +25,16 @@ export const verifyAuth = async (req, res, next) => {
        return next();
     }
 
-    // Extract session_id from JWT to prevent parallel logins
+    // Extract sid from JWT
     let jwtSessionId = null;
     try {
       const payloadBase64 = token.split('.')[1];
       const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
-      jwtSessionId = payload.session_id;
+      // jwtSessionId = payload.sid;
+      console.log(payload);
+      jwtSessionId = payload.session_id || payload.sid;
     } catch (e) {
-      console.warn("Could not parse JWT payload to extract session_id");
+      console.warn("Could not parse JWT payload to extract sid");
     }
 
     if (profile && profile.current_session_id && jwtSessionId && profile.current_session_id !== jwtSessionId) {

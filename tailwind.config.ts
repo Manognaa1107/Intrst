@@ -24,35 +24,45 @@ const config = {
         jetbrains: ["var(--font-jetbrains)", "monospace"],
       },
       colors: {
-        brand: "#C2692A",
-        accent: "#E8A87C",
-        background: "#FDF6EE",
-        foreground: "#1C1A17",
+        brand: "#C026D3",
+        accent: "#F472B6",
+
+        background: "#0A0614",
+        foreground: "#FFFFFF",
+
         primary: {
-          DEFAULT: "#C2692A",
+          DEFAULT: "#C026D3",
           foreground: "#FFFFFF",
         },
+
         secondary: {
-          DEFAULT: "#F0E6D3",
-          foreground: "#1C1A17",
+          DEFAULT: "#1A1025",
+          foreground: "#FFFFFF",
         },
+
         muted: {
-          DEFAULT: "#DDD0BB",
-          foreground: "#5C5347",
+          DEFAULT: "#221433",
+          foreground: "#A78BFA",
         },
-        "bg-base": "#FDF6EE",
-        "bg-surface": "#F0E6D3",
-        "bg-elevated": "#E8D8C0",
-        card: "#F0E6D3",
-        popover: "#F0E6D3",
-        "text-primary": "#1C1A17",
-        "text-secondary": "#5C5347",
-        "text-muted": "#9C9080",
-        border: "#DDD0BB",
-        success: "#3D7A5A",
-        danger: "#B94040",
+
+        "bg-base": "#0A0614",
+        "bg-surface": "#1A1025",
+        "bg-elevated": "#221433",
+
+        card: "#1A1025",
+        popover: "#1A1025",
+
+        "text-primary": "#FFFFFF",
+        "text-secondary": "#D8B4FE",
+        "text-muted": "#B8A1C9",
+
+        border: "#312145",
+
+        success: "#22C55E",
+        danger: "#EF4444",
+
         destructive: {
-          DEFAULT: "#B94040",
+          DEFAULT: "#EF4444",
           foreground: "#FFFFFF",
         },
       },

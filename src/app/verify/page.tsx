@@ -71,7 +71,7 @@ function VerifyContent() {
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: verifyType,
+        type: "email",
       });
 
       if (verifyError) {
@@ -85,6 +85,19 @@ function VerifyContent() {
 
       const session = data.session;
       const accessToken = session?.access_token;
+      console.log("✅ OTP verified, session:", data.session);
+      console.log("✅ verifyType:", verifyType);
+      console.log("✅ accessToken:", data.session?.access_token);
+      const session = data.session;
+      const accessToken = session?.access_token;
+      if (session) {
+        await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+      }
+      
+      // 4. Initialize profile in backend if explicitly signing up
       const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
 
       if (verifyType === 'signup' && pendingProfileStr) {
@@ -109,7 +122,10 @@ function VerifyContent() {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       try {
+        console.log("⏳ calling /auth/me...");
         const meData = await apiFetch("/auth/me", { token: accessToken });
+        console.log("✅ meData:", meData);
+        // Determine if onboarding is truly needed
         const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
         const isSigninFlow = verifyType === "email" || verifyType === "magiclink";
 

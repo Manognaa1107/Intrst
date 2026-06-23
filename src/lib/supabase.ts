@@ -7,4 +7,7 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error("Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY) are missing. Check your .env setup.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient( supabaseUrl, supabaseKey,{
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true,},
+  }
+);

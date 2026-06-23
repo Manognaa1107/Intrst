@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -193,41 +194,73 @@ export default function OnboardingPage() {
     sessionStorage.setItem("onboarding_step", step.toString());
   }, [step]);
 
-  // Sync interests back to context
-  useEffect(() => {
-    setContextInterests(selectedInterests);
-  }, [selectedInterests, setContextInterests]);
+// Sync interests back to context
+useEffect(() => {
+  setContextInterests(selectedInterests);
+}, [selectedInterests, setContextInterests]);
 
-  const goNext = () => {
-    setDirection(1);
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  };
+// Keep this ONLY if you're going to use Supabase avatar upload later
+const [previewUrl, setPreviewUrl] = useState<string>("");
 
-  const goBack = () => {
-    setDirection(-1);
-    setStep((s) => Math.max(s - 1, 1));
-  };
+const goNext = () => {
+  setDirection(1);
+  setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+};
 
-  const togglePurpose = (id: string) => {
-    setSelectedPurpose((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
-  };
+const goBack = () => {
+  setDirection(-1);
+  setStep((s) => Math.max(s - 1, 1));
+};
 
-  const toggleInterest = (tag: string) => {
-    setSelectedInterests((prev) => {
-      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
-      if (prev.length < 10) return [...prev, tag];
-      return prev;
-    });
+const togglePurpose = (id: string) => {
+  setSelectedPurpose((prev) =>
+    prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+  );
+};
+
+const toggleInterest = (tag: string) => {
+  setSelectedInterests((prev) => {
+    if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+    if (prev.length < 10) return [...prev, tag];
+    return prev;
+  });
+};
   };
 
   const handleFinish = async () => {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      if (!user_id) {
-        throw new Error("User session not found. Please log in again.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("User session not found");
+      }
+
+      const user_id = user.id;
+
+      let avatarUrl = "";
+
+      if (profileImage) {
+        const fileExt = profileImage.name.split(".").pop();
+        const fileName = `${user_id}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(fileName, profileImage);
+        console.log("Upload done, uploadError =", uploadError);
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(fileName);
+
+        avatarUrl = data.publicUrl;
+        console.log("avatarUrl =", avatarUrl);
       }
 
       let parsedYear = parseInt(year);
@@ -238,19 +271,26 @@ export default function OnboardingPage() {
       const payload: Record<string, unknown> = {
         name: displayName || name,
         bio,
-        username: username || undefined,
-        department,
-        year_of_study: parsedYear,
-        interests: selectedInterests,
-        purposes: selectedPurpose,
-      };
+payload.username = username || undefined;
+payload.department = department;
+payload.year_of_study = parsedYear;
+payload.interests = selectedInterests;
+payload.purposes = selectedPurpose;
 
+// Profile image upload support
+if (avatarUrl) {
+  payload.profile_image_url = avatarUrl;
+}
+
+console.log("About to call apiFetch...");
+console.log("user_id =", user_id);
+console.log("api url =", `/profiles/${user_id}`);
       await apiFetch(`/profiles/${user_id}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-
-      sessionStorage.removeItem("onboarding_step");
+sessionStorage.removeItem("onboarding_step");
+console.log("apiFetch done, redirecting...");
       setIsLoggedIn(true);
       router.push("/home");
     } catch (err: unknown) {
@@ -454,6 +494,39 @@ export default function OnboardingPage() {
                     find your people and build genuine campus connections.
                   </p>
                 </div>
+<div className="flex justify-center py-2">
+  <label className="relative group cursor-pointer">
+    <input
+      type="file"
+      accept="image/*"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setProfilePic(file);
+          setPreviewUrl(URL.createObjectURL(file));
+        }
+      }}
+    />
+
+    <div className="w-28 h-28 rounded-full bg-white border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden hover:border-[#505f78]/50 transition-colors">
+      {previewUrl ? (
+        <img
+          src={previewUrl}
+          alt="preview"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-1.5 text-neutral-500">
+          <CameraIcon className="w-7 h-7" />
+          <span className="text-xs font-semibold uppercase tracking-wider">
+            Upload
+          </span>
+        </div>
+      )}
+    </div>
+  </label>
+</div>
 
                 {/* Feature Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">

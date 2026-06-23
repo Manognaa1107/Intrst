@@ -68,7 +68,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (sessionToken) {
         try {
           const { apiFetch } = await import("@/lib/apiClient");
-          const data = await apiFetch("/auth/me");
+          const data = await apiFetch("/auth/me", { token: sessionToken });
           if (data && data.user) {
             setIsLoggedIn(true);
             setEmail(data.user.email || "");
@@ -79,11 +79,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               setRole(data.profile.role || 'user');
               setPermissions(data.profile.permissions || {});
               setHasCompletedPersonality(data.profile.has_completed_personality || false);
-              setIsApproved(data.profile.is_approved || false);
+              setIsApproved(data.profile.is_approved !== false);
               setIsSuspended(data.profile.is_suspended || false);
               if (data.profile.ai_profile) setAiProfile(data.profile.ai_profile);
-            }
-          } else {
+            }} else {
             setIsLoggedIn(false);
           }
         } catch (e) {
