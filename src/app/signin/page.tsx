@@ -5,6 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Mail, Eye, EyeOff, ArrowUpRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
 
 // Standard micro-interactions for links & buttons matching the landing page
 const buttonClickInteraction = {
@@ -14,25 +17,75 @@ const buttonClickInteraction = {
 };
 
 export default function SignInPage() {
+  const router = useRouter();
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSendOtp = () => {
-    if (!email) return;
-    setIsOtpSent(true);
-    console.log("Sending OTP to:", email);
+  const handleSendOtp = async () => {
+    if (!email) {
+      setError("Please enter your email.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+      });
+
+      if (error) throw error;
+
+      setIsOtpSent(true);
+
+      router.push(
+        `/verify?email=${encodeURIComponent(email)}&type=email`
+      );
+    } catch (err: any) {
+      setError(err.message || "Failed to send OTP.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginMethod === "password") {
-      console.log("Signing in with password:", email, password);
-    } else {
-      console.log("Signing in with OTP:", email, otp);
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (loginMethod === "password") {
+        if (!password) {
+          throw new Error("Please enter your password.");
+        }
+
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+        if (error) throw error;
+
+        if (data?.session) {
+          window.location.href = "/home";
+        }
+      } else {
+        await handleSendOtp();
+        return;
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,7 +166,10 @@ export default function SignInPage() {
             <div className="bg-[#f0edee] border border-neutral-200/20 rounded-full p-1 flex gap-1 mb-6">
               <button
                 type="button"
-                onClick={() => setLoginMethod("password")}
+                onClick={() => {
+                  setError(null);
+                  setLoginMethod("password");
+                }}
                 className={`w-1/2 text-[11px] font-bold py-2 rounded-full transition-all duration-300 ${loginMethod === "password"
                   ? "bg-black text-white shadow-sm"
                   : "text-neutral-500 hover:text-black"
@@ -123,7 +179,10 @@ export default function SignInPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setLoginMethod("otp")}
+                onClick={() => {
+                  setError(null);
+                  setLoginMethod("otp");
+                }}
                 className={`w-1/2 text-[11px] font-bold py-2 rounded-full transition-all duration-300 ${loginMethod === "otp"
                   ? "bg-black text-white shadow-sm"
                   : "text-neutral-500 hover:text-black"
@@ -135,6 +194,11 @@ export default function SignInPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs text-center">
+                {error}
+              </div>
+            )}
               {/* Email / Username field */}
               <div>
                 <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">Email or Username</label>
@@ -195,7 +259,8 @@ export default function SignInPage() {
                       <button
                         type="button"
                         onClick={handleSendOtp}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#505f78] bg-[#505f78]/10 hover:bg-[#505f78]/20 px-2.5 py-1.5 rounded-lg transition-all"                      >
+                        disabled={loading}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#505f78] bg-[#505f78]/10 hover:bg-[#505f78]/20 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"                      >
                         {isOtpSent ? "Resend" : "Send OTP"}
                       </button>
                     </div>
@@ -205,12 +270,23 @@ export default function SignInPage() {
 
               {/* Sign In Action Button with Framer Motion Hooks */}
               <motion.div {...buttonClickInteraction} className="pt-1">
-                <button
-                  type="submit"
-                  className="text-white rounded-full h-11 text-xs font-bold bg-black hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 w-full shadow-sm"
-                >
-                  Sign In <ArrowUpRight size={14} />
-                </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="text-white rounded-full h-11 text-xs font-bold bg-black hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 w-full shadow-sm disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Please wait...
+                  </>
+                ) : (
+                  <>
+                    {loginMethod === "password" ? "Sign In" : "Send OTP"}
+                    <ArrowUpRight size={14} />
+                  </>
+                )}
+              </button>
               </motion.div>
             </form>
 

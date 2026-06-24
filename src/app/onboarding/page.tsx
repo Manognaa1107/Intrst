@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/apiClient";
+import { useUser } from "@/context/UserContext";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -38,8 +40,6 @@ import {
   MessageCircle,
   Check,
 } from "lucide-react";
-import { useUser } from "@/context/UserContext";
-import { apiFetch } from "@/lib/apiClient";
 
 // =========================
 // DESIGN TOKENS (matching auth pages)
@@ -172,7 +172,7 @@ export default function OnboardingPage() {
   const [year, setYear] = useState(YEARS[0]);
   const [displayName, setDisplayName] = useState(name || ""); // Pre-fills with their name if available
   const [username, setUsername] = useState("");
-  const [profilePic, setProfilePic] = useState<File | null>(null);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
   const [gender, setGender] = useState("");
 
   // General
@@ -201,6 +201,13 @@ useEffect(() => {
 
 // Keep this ONLY if you're going to use Supabase avatar upload later
 const [previewUrl, setPreviewUrl] = useState<string>("");
+useEffect(() => {
+  return () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  };
+}, [previewUrl]);
 
 const goNext = () => {
   setDirection(1);
@@ -225,7 +232,6 @@ const toggleInterest = (tag: string) => {
     return prev;
   });
 };
-  };
 
   const handleFinish = async () => {
     setIsLoading(true);
@@ -269,37 +275,42 @@ const toggleInterest = (tag: string) => {
       const bio = "";
 
       const payload: Record<string, unknown> = {
+        username: username || undefined,
         name: displayName || name,
         bio,
-payload.username = username || undefined;
-payload.department = department;
-payload.year_of_study = parsedYear;
-payload.interests = selectedInterests;
-payload.purposes = selectedPurpose;
+        department,
+        year_of_study: parsedYear,
+        interests: selectedInterests,
+        purposes: selectedPurpose,
+      };
 
-// Profile image upload support
-if (avatarUrl) {
-  payload.profile_image_url = avatarUrl;
-}
+      if (avatarUrl) {
+        payload.profile_image_url = avatarUrl;
+      }
 
-console.log("About to call apiFetch...");
-console.log("user_id =", user_id);
-console.log("api url =", `/profiles/${user_id}`);
-      await apiFetch(`/profiles/${user_id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-sessionStorage.removeItem("onboarding_step");
-console.log("apiFetch done, redirecting...");
-      setIsLoggedIn(true);
-      router.push("/home");
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save profile";
-      setErrorMsg(message);
-      setIsLoading(false);
-    }
-  };
+      console.log("About to call apiFetch...");
+      console.log("user_id =", user_id);
+      console.log("api url =", `/profiles/${user_id}`);
+            await apiFetch(`/profiles/${user_id}`, {  
+            method: "PUT",
+            body: JSON.stringify(payload),
+          });
+
+      sessionStorage.removeItem("onboarding_step");
+      sessionStorage.removeItem("privacy_settings");
+      if (displayName) {
+        setName(displayName);
+      }
+      console.log("apiFetch done, redirecting...");
+            setIsLoggedIn(true);
+            router.push("/home");
+          } catch (err: unknown) {
+            const message =
+              err instanceof Error ? err.message : "Failed to save profile";
+            setErrorMsg(message);
+            setIsLoading(false);
+            }
+      };
 
   // =========================
   // PROGRESS BAR
@@ -503,7 +514,7 @@ console.log("apiFetch done, redirecting...");
       onChange={(e) => {
         const file = e.target.files?.[0];
         if (file) {
-          setProfilePic(file);
+          setProfileImage(file);
           setPreviewUrl(URL.createObjectURL(file));
         }
       }}
@@ -518,7 +529,7 @@ console.log("apiFetch done, redirecting...");
         />
       ) : (
         <div className="flex flex-col items-center gap-1.5 text-neutral-500">
-          <CameraIcon className="w-7 h-7" />
+          <Camera className="w-7 h-7" />
           <span className="text-xs font-semibold uppercase tracking-wider">
             Upload
           </span>
@@ -782,8 +793,9 @@ console.log("apiFetch done, redirecting...");
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file && typeof setProfilePic === 'function') {
-                            setProfilePic(file);
+                          if (file && typeof setProfileImage === 'function') {
+                            setProfileImage(file);
+                            setPreviewUrl(URL.createObjectURL(file));
                           }
                         }}
                       />
@@ -1019,12 +1031,12 @@ console.log("apiFetch done, redirecting...");
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#505f78]/20 to-[#855300]/20 flex items-center justify-center">
                         <span className="text-sm font-bold text-[#505f78]">
-                          {name ? name.charAt(0).toUpperCase() : "?"}
+                          {(displayName || name)?.charAt(0).toUpperCase() || "?"}
                         </span>
                       </div>
                       <div>
                         <p className="text-xs font-bold text-[#0f0f10]">
-                          {name || "Student"}
+                          {displayName || name || "Student"}
                         </p>
                         <p className="text-[10px] text-neutral-400">
                           {department} · {year}

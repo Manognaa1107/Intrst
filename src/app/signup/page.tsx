@@ -90,18 +90,11 @@ export default function SignupPage() {
       // GITAM email validation
       const domain = formData.email.split("@")[1]?.toLowerCase();
 
-      const isGitamEmail =
-        domain === "gitam.in" ||
-        domain.endsWith(".gitam.in") ||
-        domain === "gitam.edu" ||
-        domain.endsWith(".gitam.edu");
-
       // if (!isGitamEmail) {
       //   setError("Only GITAM email addresses are allowed.");
       //   setLoading(false);
       //   return;
       // }
-      const ADMIN_EMAIL = "vempatapuyoshitha@gmail.com";
 
       if (!isGitamEmail && formData.email.toLowerCase() !== ADMIN_EMAIL) {
         setError("Only GITAM email addresses are allowed.");
@@ -128,40 +121,42 @@ export default function SignupPage() {
         timestamp: new Date().getTime()
       }));
 
-      // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
-      if (data?.session) {
-        try {
-          await apiFetch("/auth/initialize-profile", {
-            method: "POST",
-            body: JSON.stringify({
-              user_id: data.user?.id,
-              email: formData.email,
-              name: formData.name,
-              username: formData.username,
-            }),
-          });
-        } catch (initErr) {
-          console.error("Auto-initialization failed:", initErr);
-        }
+    // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
+    if (data?.session) {
+      try {
+        await apiFetch("/auth/initialize-profile", {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: data.user?.id,
+            email: formData.email,
+            name: formData.name,
+            username: formData.username,
+          }),
+        });
+      } catch (initErr) {
+        console.error("Auto-initialization failed:", initErr);
+      }
 
-        router.push("/onboarding");
-        return;
-// 5. Wait then send OTP
-await new Promise(resolve => setTimeout(resolve, 2000));
+      router.push("/onboarding");
+      return;
+    }
 
-const { error: otpError } = await supabase.auth.signInWithOtp({
-  email: formData.email,
-  options: { shouldCreateUser: false }
-});
+    // 5. Wait then send OTP
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-if (otpError) {
-  console.warn("OTP resend skipped:", otpError.message);
-}
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: formData.email,
+      options: { shouldCreateUser: false },
+    });
 
-// 6. Always redirect to verify
-router.push(
-  `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
-);
+    if (otpError) {
+      console.warn("OTP resend skipped:", otpError.message);
+    }
+
+    // 6. Always redirect to verify
+    router.push(
+      `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
+    );
     } catch (err: any) {
       console.error("Signup process failed:", err);
       setError(err.message || "An error occurred during signup.");
