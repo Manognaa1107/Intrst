@@ -83,13 +83,13 @@ function VerifyContent() {
         throw verifyError;
       }
 
-      const session = data.session;
-      const accessToken = session?.access_token;
       console.log("✅ OTP verified, session:", data.session);
       console.log("✅ verifyType:", verifyType);
       console.log("✅ accessToken:", data.session?.access_token);
+
       const session = data.session;
       const accessToken = session?.access_token;
+  
       if (session) {
         await supabase.auth.setSession({
           access_token: session.access_token,

@@ -22,8 +22,8 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  // const [otp, setOtp] = useState("");
+  // const [isOtpSent, setIsOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +43,7 @@ export default function SignInPage() {
 
       if (error) throw error;
 
-      setIsOtpSent(true);
+      // setIsOtpSent(true);
 
       router.push(
         `/verify?email=${encodeURIComponent(email)}&type=email`
@@ -76,7 +76,7 @@ export default function SignInPage() {
         if (error) throw error;
 
         if (data?.session) {
-          window.location.href = "/home";
+          router.push("/home");
         }
       } else {
         await handleSendOtp();
@@ -88,7 +88,26 @@ export default function SignInPage() {
       setLoading(false);
     }
   };
-
+  const handleGoogleSignIn = async () => {
+          setLoading(true);
+          setError(null);
+          try {
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+                queryParams: {
+                prompt: "select_account",
+                },
+              },
+            });
+            if (error) throw error;
+            // No need to router.push — Supabase redirects automatically
+          } catch (err: any) {
+            setError(err.message || "Google sign in failed.");
+            setLoading(false);
+          }
+        };
   return (
     <main className="min-h-screen w-full flex items-center justify-center relative overflow-hidden stitch-font-inter p-6" style={{ backgroundColor: "#faf9f6" }}>
       <style>{`
@@ -243,28 +262,10 @@ export default function SignInPage() {
                   </div>
                 </div>
               ) : (
-                <div key="otp-field" className="space-y-4 animate-fade-in">
-                  {/* OTP field */}
-                  <div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                        maxLength={6}
-                        placeholder="Enter 6-digit OTP"
-                        className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 pr-24 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSendOtp}
-                        disabled={loading}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#505f78] bg-[#505f78]/10 hover:bg-[#505f78]/20 px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"                      >
-                        {isOtpSent ? "Resend" : "Send OTP"}
-                      </button>
-                    </div>
-                  </div>
+                <div key="otp-field" className="animate-fade-in">
+                  <p className="text-xs text-neutral-500 leading-relaxed">
+                    We&apos;ll send a one-time code to your email address. You&apos;ll be redirected to enter it.
+                  </p>
                 </div>
               )}
 
@@ -303,6 +304,8 @@ export default function SignInPage() {
               <motion.div {...buttonClickInteraction}>
                 <button
                   type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
                   className="w-full h-11 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-neutral-800 hover:bg-[#F8FAFC] transition-all flex items-center justify-center gap-2.5 shadow-sm"
                 >
                   <div className="w-4 h-4 flex items-center justify-center">

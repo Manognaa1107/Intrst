@@ -9,8 +9,27 @@ import { apiFetch } from '@/lib/apiClient';
 export default function AuthCallbackPage() {
   const router = useRouter();
   const { setName, setEmail, setIsLoggedIn } = useUser();
+  
+    const email = user?.email?.toLowerCase() ?? "";
 
+    const isGitam =
+      email.endsWith("@gitam.in") ||
+      email.endsWith("@student.gitam.edu");
+
+    if (!isGitam) {
+      await supabase.auth.signOut();
+
+      alert("Only GITAM email addresses are allowed.");
+
+      router.replace("/signup");
+
+      return;
+    }
   useEffect(() => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
     const handleAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -22,6 +41,23 @@ export default function AuthCallbackPage() {
         }
 
         const user = session.user;
+        const email = user.email?.toLowerCase() ?? "";
+
+        const isGitam =
+          email.endsWith("@gitam.in") ||
+          email.endsWith("@student.gitam.edu");
+
+        const ADMIN_EMAIL = "saianupam4146@gmail.com";
+
+        if (!isGitam && email !== ADMIN_EMAIL) {
+          await supabase.auth.signOut();
+
+          alert("Only GITAM email addresses are allowed.");
+
+          router.replace("/signup");
+
+          return;
+        }
         setEmail(user.email || '');
         setIsLoggedIn(true);
 
