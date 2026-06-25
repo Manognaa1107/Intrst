@@ -158,7 +158,7 @@ export default function OnboardingPage() {
     user_id,
   } = useUser();
 
-  
+
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
 
@@ -228,39 +228,39 @@ export default function OnboardingPage() {
     }
   }, []);
 
-// Keep this ONLY if you're going to use Supabase avatar upload later
-const [previewUrl, setPreviewUrl] = useState<string>("");
-useEffect(() => {
-  return () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
+  // Keep this ONLY if you're going to use Supabase avatar upload later
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const goNext = () => {
+    setDirection(1);
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
-}, [previewUrl]);
 
-const goNext = () => {
-  setDirection(1);
-  setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-};
+  const goBack = () => {
+    setDirection(-1);
+    setStep((s) => Math.max(s - 1, 1));
+  };
 
-const goBack = () => {
-  setDirection(-1);
-  setStep((s) => Math.max(s - 1, 1));
-};
+  const togglePurpose = (id: string) => {
+    setSelectedPurpose((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
 
-const togglePurpose = (id: string) => {
-  setSelectedPurpose((prev) =>
-    prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-  );
-};
-
-const toggleInterest = (tag: string) => {
-  setSelectedInterests((prev) => {
-    if (prev.includes(tag)) return prev.filter((t) => t !== tag);
-    if (prev.length < 10) return [...prev, tag];
-    return prev;
-  });
-};
+  const toggleInterest = (tag: string) => {
+    setSelectedInterests((prev) => {
+      if (prev.includes(tag)) return prev.filter((t) => t !== tag);
+      if (prev.length < 10) return [...prev, tag];
+      return prev;
+    });
+  };
 
   const handleFinish = async () => {
     setIsLoading(true);
@@ -321,10 +321,10 @@ const toggleInterest = (tag: string) => {
       console.log("About to call apiFetch...");
       console.log("user_id =", user_id);
       console.log("api url =", `/profiles/${user_id}`);
-            await apiFetch(`/profiles/${user_id}`, {  
-            method: "PUT",
-            body: JSON.stringify(payload),
-          });
+      await apiFetch(`/profiles/${user_id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
 
       sessionStorage.removeItem("onboarding_step");
       sessionStorage.removeItem("privacy_settings");
@@ -332,15 +332,15 @@ const toggleInterest = (tag: string) => {
         setName(displayName);
       }
       console.log("apiFetch done, redirecting...");
-            setIsLoggedIn(true);
-            router.push("/home");
-          } catch (err: unknown) {
-            const message =
-              err instanceof Error ? err.message : "Failed to save profile";
-            setErrorMsg(message);
-            setIsLoading(false);
-            }
-      };
+      setIsLoggedIn(true);
+      router.push("/home");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save profile";
+      setErrorMsg(message);
+      setIsLoading(false);
+    }
+  };
 
   // =========================
   // PROGRESS BAR
@@ -516,12 +516,6 @@ const toggleInterest = (tag: string) => {
                 className="relative z-10"
               >
                 <div className="text-center mb-8">
-                  {/* Floating icon */}
-                  <div className="float-anim inline-block mb-5">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#505f78]/10 to-[#855300]/10 flex items-center justify-center mx-auto border border-[#505f78]/10">
-                      <Sparkles className="w-7 h-7 text-[#505f78]" />
-                    </div>
-                  </div>
 
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0f0f10] mb-2">
                     Welcome to{" "}
@@ -577,11 +571,11 @@ const toggleInterest = (tag: string) => {
 
                 {/* CTA */}
                 <motion.div {...buttonClickInteraction}>
-                <button
-                  type="button"
-                  onClick={goNext}
-                  className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm"
+                  >
                     Let&apos;s Go <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </motion.div>
@@ -938,12 +932,12 @@ const toggleInterest = (tag: string) => {
                     </button>
                   </motion.div>
                   <motion.div {...buttonClickInteraction} className="flex-1">
-                  <button
-                    type="button"
-                    onClick={goNext}
-                    disabled={!isProfileValid}
-                    className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
+                    <button
+                      type="button"
+                      onClick={goNext}
+                      disabled={!isProfileValid}
+                      className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
                       Continue <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </motion.div>

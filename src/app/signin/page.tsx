@@ -89,25 +89,25 @@ export default function SignInPage() {
     }
   };
   const handleGoogleSignIn = async () => {
-          setLoading(true);
-          setError(null);
-          try {
-            const { error } = await supabase.auth.signInWithOAuth({
-              provider: "google",
-              options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
-                queryParams: {
-                prompt: "select_account",
-                },
-              },
-            });
-            if (error) throw error;
-            // No need to router.push — Supabase redirects automatically
-          } catch (err: any) {
-            setError(err.message || "Google sign in failed.");
-            setLoading(false);
-          }
-        };
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+      if (error) throw error;
+      // No need to router.push — Supabase redirects automatically
+    } catch (err: any) {
+      setError(err.message || "Google sign in failed.");
+      setLoading(false);
+    }
+  };
   return (
     <main className="min-h-screen w-full flex items-center justify-center relative overflow-hidden stitch-font-inter p-6" style={{ backgroundColor: "#faf9f6" }}>
       <style>{`
@@ -213,11 +213,11 @@ export default function SignInPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs text-center">
-                {error}
-              </div>
-            )}
+              {error && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs text-center">
+                  {error}
+                </div>
+              )}
               {/* Email / Username field */}
               <div>
                 <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">Email or Username</label>
@@ -271,23 +271,23 @@ export default function SignInPage() {
 
               {/* Sign In Action Button with Framer Motion Hooks */}
               <motion.div {...buttonClickInteraction} className="pt-1">
-              <button
-                type="submit"
-                disabled={loading}
-                className="text-white rounded-full h-11 text-xs font-bold bg-black hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 w-full shadow-sm disabled:opacity-60"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Please wait...
-                  </>
-                ) : (
-                  <>
-                    {loginMethod === "password" ? "Sign In" : "Send OTP"}
-                    <ArrowUpRight size={14} />
-                  </>
-                )}
-              </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="text-white rounded-full h-11 text-xs font-bold bg-black hover:bg-neutral-800 transition-all flex items-center justify-center gap-1.5 w-full shadow-sm disabled:opacity-60"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Please wait...
+                    </>
+                  ) : (
+                    <>
+                      {loginMethod === "password" ? "Sign In" : "Send OTP"}
+                      <ArrowUpRight size={14} />
+                    </>
+                  )}
+                </button>
               </motion.div>
             </form>
 
@@ -320,16 +320,7 @@ export default function SignInPage() {
                 </button>
               </motion.div>
 
-              {/* Campus Email Button */}
-              <motion.div {...buttonClickInteraction}>
-                <button
-                  type="button"
-                  className="w-full h-11 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-neutral-800 hover:bg-[#F8FAFC] transition-all flex items-center justify-center gap-2.5 shadow-sm"
-                >
-                  <Mail size={14} className="text-neutral-600" />
-                  Continue with Campus Email
-                </button>
-              </motion.div>
+
             </div>
 
             {/* Signup Link */}

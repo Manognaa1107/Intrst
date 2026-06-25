@@ -755,8 +755,8 @@ function UserActivityItem({ name, email, points, level, status, onSuspend }: any
             <Badge
               variant="outline"
               className={`text-[9px] h-5 uppercase tracking-tighter rounded-md font-semibold ${status === "flagged"
-                  ? "border-amber-500/30 text-amber-700 bg-amber-50"
-                  : "border-emerald-500/30 text-emerald-700 bg-emerald-50"
+                ? "border-amber-500/30 text-amber-700 bg-amber-50"
+                : "border-emerald-500/30 text-emerald-700 bg-emerald-50"
                 }`}
             >
               {status}

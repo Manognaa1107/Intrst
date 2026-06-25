@@ -121,8 +121,8 @@ export default function EventsPage() {
               key={f}
               onClick={() => setActiveFilter(f)}
               className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${activeFilter === f
-                  ? "bg-black text-white shadow-sm"
-                  : "bg-white/80 border border-black/5 text-neutral-500 hover:text-black hover:bg-neutral-100"
+                ? "bg-black text-white shadow-sm"
+                : "bg-white/80 border border-black/5 text-neutral-500 hover:text-black hover:bg-neutral-100"
                 }`}
             >
               {f}
@@ -208,8 +208,8 @@ export default function EventsPage() {
                         size="sm"
                         onClick={() => toggleGoing(event.event_id)}
                         className={`flex items-center gap-2 font-semibold h-10 px-5 rounded-xl transition-all ${isGoing
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
-                            : "bg-black hover:bg-[#505f78] text-white shadow-sm"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-red-50 hover:text-red-700 hover:border-red-200"
+                          : "bg-black hover:bg-[#505f78] text-white shadow-sm"
                           }`}
                       >
                         {isGoing && <CheckIcon className="w-4 h-4" />}
@@ -235,7 +235,7 @@ export default function EventsPage() {
       {canCreateEvent && (
         <button
           onClick={() => setIsFabOpen(true)}
-          className="fixed bottom-[100px] md:bottom-8 right-4 md:right-8 w-14 h-14 bg-black hover:bg-[#505f78] active:scale-95 transition-all text-white rounded-full shadow-md flex items-center justify-center z-40"
+          className="fixed bottom-24 md:bottom-28 right-4 md:right-8 w-14 h-14 bg-black hover:bg-[#505f78] active:scale-95 transition-all text-white rounded-full shadow-md flex items-center justify-center z-40"
         >
           <PlusIcon className="w-6 h-6" />
         </button>
