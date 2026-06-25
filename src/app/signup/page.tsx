@@ -88,7 +88,7 @@ export default function SignupPage() {
       }
 
       // GITAM email validation
-      const domain = formData.email.split("@")[1]?.toLowerCase();
+      // const domain = formData.email.split("@")[1]?.toLowerCase();
 
       // if (!isGitamEmail) {
       //   setError("Only GITAM email addresses are allowed.");
@@ -109,10 +109,10 @@ export default function SignupPage() {
       });
       if (authError) throw authError;
 
-      console.log("Signup Data:", data);
-      console.log("Signup Error:", authError);
+      // console.log("Signup Data:", data);
+      // console.log("Signup Error:", authError);
 
-      if (authError) throw authError;
+      // if (authError) throw authError;
 
       sessionStorage.setItem("intrst_pending_profile", JSON.stringify({
         name: formData.name,
@@ -120,7 +120,7 @@ export default function SignupPage() {
         email: formData.email,
         timestamp: new Date().getTime()
       }));
-
+    
     // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
     if (data?.session) {
       try {
@@ -164,6 +164,26 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
+  const handleGoogleSignUp = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+              redirectTo: `${window.location.origin}/auth/callback`,
+              queryParams: {
+              prompt: "select_account",
+              },
+            },
+          });
+          if (error) throw error;
+          // No need to router.push — Supabase redirects automatically
+        } catch (err: any) {
+          setError(err.message || "Google sign in failed.");
+          setLoading(false);
+        }
+      };
 
   return (
     <main className="min-h-screen w-full flex items-start justify-center relative overflow-hidden stitch-font-inter p-6 pt-20 md:pt-24 lg:pt-32" style={{ backgroundColor: "#faf9f6" }}>
@@ -351,6 +371,8 @@ export default function SignupPage() {
               <motion.div {...buttonClickInteraction}>
                 <button
                   type="button"
+                  onClick={handleGoogleSignUp}
+                  disabled={loading}
                   className="w-full h-11 rounded-full bg-white border border-[#E2E8F0] text-xs font-bold text-neutral-800 hover:bg-[#F8FAFC] transition-all flex items-center justify-center gap-2.5 shadow-sm"
                 >
                   <div className="w-4 h-4 flex items-center justify-center">

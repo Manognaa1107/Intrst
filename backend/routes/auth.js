@@ -1,6 +1,6 @@
 import express from "express";
 import supabase from "../config/supabase.js";
-import { verifyAuth } from "../utils/auth.js";
+import { verifyAuth,verifyAuthLight } from "../utils/auth.js";
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ const isClubEmail = (email) => email.toLowerCase().endsWith("_vsp@gitam.in");
  * This endpoint is called by the frontend AFTER Supabase OTP verification is successful.
  * It ensures a profile exists in the public.profiles table with the correct initial role.
  */
-router.post("/initialize-profile", verifyAuth, async (req, res) => {
+router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
   const { user_id, email, name, username, interests, aiProfile, phone, club_details } = req.body;
 
   if (!user_id || !email || !username) {
