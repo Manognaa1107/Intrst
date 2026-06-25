@@ -26,6 +26,7 @@ export default function HomePage() {
   const [isPosting, setIsPosting] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
@@ -72,9 +73,23 @@ export default function HomePage() {
     }
   };
 
+  const fetchSavedPosts = async () => {
+    if (!user_id) return;
+
+    const { data, error } = await supabase
+      .from("saved_posts")
+      .select("post_id")
+      .eq("user_id", user_id);
+
+    if (!error && data) {
+      setSavedPosts(data.map(item => item.post_id));
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
     fetchFeaturedEvents();
+    fetchSavedPosts();
   }, [user_id]);
 
   const handleCreatePost = async () => {
@@ -127,6 +142,67 @@ export default function HomePage() {
       console.error("Failed to like post:", error);
       // Rollback if failed
       fetchPosts();
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this post?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await apiFetch(`/posts/${postId}`, {
+        method: "DELETE",
+      });
+
+      setPosts(prev =>
+        prev.filter(post => post.id !== postId)
+      );
+
+      fetchPosts();
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
+  const toggleSavePost = async (postId: string) => {
+    if (!user_id) return;
+        console.log("Saving post:", postId);
+        console.log("User:", user_id);
+
+    try {
+      const isSaved = savedPosts.includes(postId);
+
+      if (isSaved) {
+        const { error } = await supabase
+          .from("saved_posts")
+          .delete()
+          .eq("user_id", user_id)
+          .eq("post_id", postId);
+        
+
+        if (error) throw error;
+        console.log("Insert success");
+        
+        setSavedPosts(prev =>
+          prev.filter(id => id !== postId)
+        );
+      } else {
+        const { error } = await supabase
+          .from("saved_posts")
+          .insert({
+            user_id,
+            post_id: postId,
+          });
+
+        if (error) throw error;
+
+        setSavedPosts(prev => [...prev, postId]);
+      }
+    } catch (error) {
+      console.error("Save failed:", error);
     }
   };
 
@@ -352,9 +428,23 @@ export default function HomePage() {
                         {post.is_anonymous ? "Hidden Identity" : (post.profiles?.department || "General")} &middot; {post.is_anonymous ? "Unknown" : (post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member")}
                       </p>
                     </div>
-                    <Badge className={getTagColor(post.post_type)} variant="outline">
+                    {/* <Badge className={getTagColor(post.post_type)} variant="outline">
                       {post.post_type}
-                    </Badge>
+                    </Badge> */}
+                    <div className="flex items-center gap-2">
+                      <Badge className={getTagColor(post.post_type)} variant="outline">
+                        {post.post_type}
+                      </Badge>
+
+                      {post.user_id === user_id && (
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="text-red-500 hover:text-red-700 text-xs font-medium"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -384,8 +474,24 @@ export default function HomePage() {
                 </button>
                 <div className="flex-1"></div>
                 <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
-                <button className="p-1.5 rounded-full hover:bg-neutral-100 hover:text-black transition-colors">
+                {/* <button className="p-1.5 rounded-full hover:bg-neutral-100 hover:text-black transition-colors">
                   <BookmarkIcon className="w-4 h-4" />
+                </button> */}
+                <button
+                  onClick={() => toggleSavePost(post.id)}
+                  className={`p-1.5 rounded-full transition-colors ${
+                    savedPosts.includes(post.id)
+                      ? "text-[#855300] bg-[#855300]/10"
+                      : "hover:bg-neutral-100 hover:text-black"
+                  }`}
+                >
+                  <BookmarkIcon
+                    className={`w-4 h-4 ${
+                      savedPosts.includes(post.id)
+                        ? "fill-current"
+                        : ""
+                    }`}
+                  />
                 </button>
               </div>
 

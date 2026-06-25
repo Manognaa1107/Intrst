@@ -68,6 +68,7 @@ export default function MyProfilePage() {
   const [userPosts, setUserPosts] = useState<UserPost[]>([]);
   const [followers, setFollowers] = useState<Connection[]>([]);
   const [following, setFollowing] = useState<Connection[]>([]);
+  const [savedPosts, setSavedPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ← ADDED: password modal state
@@ -124,9 +125,77 @@ export default function MyProfilePage() {
     }
   }, [user_id]);
 
+  // const fetchSavedPosts = async () => {
+  //   if (!user_id) return;
+  //   console.log("Fetching saved posts for:", user_id);
+    
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from("saved_posts")
+  //       .select(`
+  //         post_id,
+  //         posts (
+  //           id,
+  //           content,
+  //           created_at,
+  //           post_type
+  //         )
+  //       `)
+  //       .eq("user_id", user_id);
+
+  //     if (error) throw error;
+  //     console.log("Saved posts raw:", data);
+  //     console.log("Saved posts error:", error);
+
+  //     setSavedPosts(
+  //       data?.map((item: any) => item.posts).filter(Boolean) || []
+  //     );
+  //   } catch (err) {
+  //     console.error("Failed to fetch saved posts:", err);
+  //   }
+  // };
+  const fetchSavedPosts = async () => {
+    if (!user_id) return;
+
+    try {
+      const { data: savedData, error: savedError } = await supabase
+        .from("saved_posts")
+        .select("post_id")
+        .eq("user_id", user_id);
+
+      if (savedError) throw savedError;
+
+      if (!savedData?.length) {
+        setSavedPosts([]);
+        return;
+      }
+
+      const postIds = savedData.map(item => item.post_id);
+
+      const { data: postsData, error: postsError } = await supabase
+        .from("posts")
+        .select(`
+          id,
+          content,
+          created_at,
+          post_type
+        `)
+        .in("id", postIds);
+
+      if (postsError) throw postsError;
+
+      console.log("Posts fetched:", postsData);
+
+      setSavedPosts(postsData || []);
+    } catch (err) {
+      console.error("Failed to fetch saved posts:", err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchSavedPosts();
+  }, [fetchData, user_id]);
 
   const toggle = (k: keyof typeof settings) => {
     const newSettings = { ...settings, [k]: !settings[k] };
@@ -208,13 +277,23 @@ export default function MyProfilePage() {
     }
   };
 
+  //Sign out handler
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const name = profile?.name || contextName;
   const interests = profile?.interests?.map(i => i.interests.interest) || contextInterests;
   const role = profile?.role || contextRole;
 
-  const TABS = role === 'club'
-    ? (["Posts", "Insights", "Settings"] as const)
-    : (["Posts", "Connections", "Clubs", "Settings"] as const);
+  const TABS = role === "club" ? 
+    (["Posts", "Insights", "Settings"] as const) :
+    (["Posts", "Saved", "Connections", "Clubs", "Settings"] as const);
 
   if (loading && !profile) {
     return (
@@ -435,32 +514,33 @@ export default function MyProfilePage() {
           ))}
         </div>
 
-        {activeTab === "Insights" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
-                <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">428</div>
-                <div className="text-xs text-emerald-600 font-bold mt-2">+12% from last week</div>
-              </Card>
-              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
-                <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">1.8k</div>
-                <div className="text-xs text-emerald-600 font-bold mt-2">+24% from last week</div>
-              </Card>
-            </div>
+      {activeTab === "Insights" && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
+              <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
+              <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">428</div>
+              <div className="text-xs text-emerald-600 font-bold mt-2">+12% from last week</div>
+            </Card>
 
-            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">
-                  Engagement Trends
-                 </h3>
+            <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
+              <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
+              <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">1.8k</div>
+              <div className="text-xs text-emerald-600 font-bold mt-2">+24% from last week</div>
+            </Card>
+          </div>
+
+          <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">
+                Engagement Trends
+              </h3>
               <div className="text-xs font-bold uppercase tracking-widest text-[#855300]">
                 Last 7 Days
               </div>
-             </div>
+            </div>
 
-              <div className="h-48 flex items-end justify-between gap-3 px-2">
+            <div className="h-48 flex items-end justify-between gap-3 px-2">
               {[45, 78, 56, 92, 45, 67, 88].map((val, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                   <div
@@ -478,66 +558,27 @@ export default function MyProfilePage() {
               ))}
             </div>
           </Card>
-                   </div>
-                    <span className="text-[10px] uppercase font-bold text-neutral-400">{['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
 
-            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm space-y-6">
-              <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Top Interactions</h3>
-              <div className="space-y-4">
-                {[
-                  { label: "Hearts & Likes", count: "1,240", icon: ThumbsUpIcon, color: "text-rose-600" },
-                  { label: "Community Shares", count: "215", icon: Shield, color: "text-blue-600" },
-                  { label: "Profile Views", count: "890", icon: UserIcon, color: "text-[#855300]" },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-black/5">
-                    <div className="flex items-center gap-3">
-                      <item.icon className={`w-5 h-5 ${item.color}`} />
-                      <span className="text-sm font-medium text-[#0f0f10]">{item.label}</span>
-                    </div>
-                    <span className="font-dmserif font-bold text-[#0f0f10]">{item.count}</span>
+          <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm space-y-6">
+            <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Top Interactions</h3>
+            <div className="space-y-4">
+              {[
+                { label: "Hearts & Likes", count: "1,240", icon: ThumbsUpIcon, color: "text-rose-600" },
+                { label: "Community Shares", count: "215", icon: Shield, color: "text-blue-600" },
+                { label: "Profile Views", count: "890", icon: UserIcon, color: "text-[#855300]" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-black/5">
+                  <div className="flex items-center gap-3">
+                    <item.icon className={`w-5 h-5 ${item.color}`} />
+                    <span className="text-sm font-medium text-[#0f0f10]">{item.label}</span>
                   </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "Posts" && (
-          <div className="space-y-4">
-            {userPosts.map((post, i) => (
-              <Card key={i} className="p-5 bg-white border border-black/5 hover:border-neutral-300 rounded-2xl transition-all shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-[10px] font-bold tracking-widest px-3 py-1 rounded-full border border-[#505f78]/20 bg-[#505f78]/5 text-[#505f78] uppercase`}>
-                    {post.post_type || "POST"}
-                  </span>
-                  <span className="text-[10px] font-bold text-neutral-400 ml-auto uppercase tracking-tighter">
-                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-                  </span>
+                  <span className="font-dmserif font-bold text-[#0f0f10]">{item.count}</span>
                 </div>
-                <p className="text-[#0f0f10] leading-relaxed text-sm mb-4">{post.content}</p>
-                <div className="flex items-center gap-5 text-neutral-500 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <ThumbsUpIcon className="w-4 h-4" /> {post.post_likes?.count || 0}
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <MessageCircleIcon className="w-4 h-4" /> {post.post_comments?.count || 0}
-                  </div>
-                  <div className="flex-1" />
-                  <BookmarkIcon className="w-4 h-4" />
-                </div>
-              </Card>
-            ))}
-            {userPosts.length === 0 && (
-              <div className="py-12 text-center">
-                <p className="text-neutral-500 text-sm">You haven&apos;t posted anything yet.</p>
-              </div>
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
 
         {activeTab === "Connections" && (
           <div className="space-y-6">
@@ -602,6 +643,33 @@ export default function MyProfilePage() {
               <div className="py-12 text-center">
                 <p className="text-neutral-500 text-sm">You haven&apos;t followed any clubs yet.</p>
               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "Saved" && (
+          <div className="space-y-4">
+            {savedPosts.length === 0 ? (
+              <div className="text-center py-10 text-neutral-500">
+                No saved posts yet.
+              </div>
+            ) : (
+              savedPosts.map((post) => (
+                <Card
+                  key={post.id}
+                  className="p-4 bg-white border border-black/5 rounded-2xl"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <Badge>{post.post_type}</Badge>
+
+                    <span className="text-xs text-neutral-500">
+                      {new Date(post.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <p className="text-sm">{post.content}</p>
+                </Card>
+              ))
             )}
           </div>
         )}
@@ -743,32 +811,29 @@ export default function MyProfilePage() {
                   </p>
                   <div className="space-y-3">
                     <div className="flex gap-2">
-<input
-  type="email"
-  placeholder="admin@student.gitam.edu"
-  className="flex-1 bg-white border border-black/5 h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-[#505f78] text-[#0f0f10]"
-/>
-<Button size="sm" className="bg-black text-white hover:bg-[#505f78] rounded-lg">
-  Add
-</Button>
-</div>
+                    <input
+                      type="email"
+                      placeholder="admin@student.gitam.edu"
+                      className="flex-1 bg-white border border-black/5 h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-[#505f78] text-[#0f0f10]"
+                    />
+                    <Button size="sm" className="bg-black text-white hover:bg-[#505f78] rounded-lg">
+                      Add
+                    </Button>
+                    </div>
 
-{/* Placeholder for list of admins */}
-<div className="pt-2 border-t border-black/5">
-  <div className="flex items-center justify-between py-2">
-    <span className="text-sm text-[#0f0f10]">You (Owner)</span>
-    <Badge variant="outline" className="text-[10px] uppercase">
-      Owner
-    </Badge>
-  </div>
-</div>
-                        <Badge variant="outline" className="text-[10px] uppercase">Owner</Badge>
+                    {/* Placeholder for list of admins */}
+                    <div className="pt-2 border-t border-black/5">
+                      <div className="flex items-center justify-between py-2">
+                        <span className="text-sm text-[#0f0f10]">You (Owner)</span>
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          Owner
+                        </Badge>
                       </div>
                     </div>
                   </div>
                 </Card>
               </div>
-            )}
+            )};
 
             {/* Account */}
             <div>
@@ -795,6 +860,13 @@ export default function MyProfilePage() {
                 >
                   Export My Data
                 </button> */}
+
+                <button
+                  onClick={handleSignOut}
+                  className="w-full text-left px-4 py-3.5 text-sm text-[#0f0f10] hover:bg-neutral-50 transition-colors"
+                >
+                  Sign Out
+                </button>
 
                 <button
                   onClick={handleDeleteAccount}
