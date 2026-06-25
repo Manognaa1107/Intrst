@@ -148,6 +148,8 @@ export default function OnboardingPage() {
   const {
     name,
     setName,
+    username: contextUsername,
+    setUsername: setContextUsername,
     role,
     interests: contextInterests,
     setInterests: setContextInterests,
@@ -156,6 +158,7 @@ export default function OnboardingPage() {
     user_id,
   } = useUser();
 
+  
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
 
@@ -168,16 +171,25 @@ export default function OnboardingPage() {
   );
 
   // Step 4: Profile
-  const [department, setDepartment] = useState(DEPARTMENTS[0]);
-  const [year, setYear] = useState(YEARS[0]);
-  const [displayName, setDisplayName] = useState(name || ""); // Pre-fills with their name if available
-  const [username, setUsername] = useState("");
+  const [department, setDepartment] = useState("");
+  const [year, setYear] = useState("");
+  useState(name || ""); // Pre-fills with their name if available
+  const [displayName, setDisplayName] = useState(name || "");
+  const [username, setUsername] = useState(contextUsername || "");
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [gender, setGender] = useState("");
-
+  const [bio, setBio] = useState("");
   // General
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const isProfileValid = Boolean(
+    displayName.trim() &&
+    username.trim() &&
+    department &&
+    year &&
+    gender
+  );
 
   // Restore step from session
   useEffect(() => {
@@ -194,10 +206,27 @@ export default function OnboardingPage() {
     sessionStorage.setItem("onboarding_step", step.toString());
   }, [step]);
 
-// Sync interests back to context
-useEffect(() => {
-  setContextInterests(selectedInterests);
-}, [selectedInterests, setContextInterests]);
+  // Sync interests back to context
+  useEffect(() => {
+    setContextInterests(selectedInterests);
+  }, [selectedInterests, setContextInterests]);
+
+  // Sync username back to context
+  useEffect(() => {
+    const pendingProfile = sessionStorage.getItem("intrst_pending_profile");
+
+    if (pendingProfile) {
+      const data = JSON.parse(pendingProfile);
+
+      if (data.name) {
+        setDisplayName(data.name);
+      }
+
+      if (data.username) {
+        setUsername(data.username);
+      }
+    }
+  }, []);
 
 // Keep this ONLY if you're going to use Supabase avatar upload later
 const [previewUrl, setPreviewUrl] = useState<string>("");
@@ -277,6 +306,7 @@ const toggleInterest = (tag: string) => {
       const payload: Record<string, unknown> = {
         username: username || undefined,
         name: displayName || name,
+        gender,
         bio,
         department,
         year_of_study: parsedYear,
@@ -505,39 +535,6 @@ const toggleInterest = (tag: string) => {
                     find your people and build genuine campus connections.
                   </p>
                 </div>
-<div className="flex justify-center py-2">
-  <label className="relative group cursor-pointer">
-    <input
-      type="file"
-      accept="image/*"
-      className="hidden"
-      onChange={(e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          setProfileImage(file);
-          setPreviewUrl(URL.createObjectURL(file));
-        }
-      }}
-    />
-
-    <div className="w-28 h-28 rounded-full bg-white border-2 border-dashed border-black/10 flex items-center justify-center overflow-hidden hover:border-[#505f78]/50 transition-colors">
-      {previewUrl ? (
-        <img
-          src={previewUrl}
-          alt="preview"
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="flex flex-col items-center gap-1.5 text-neutral-500">
-          <Camera className="w-7 h-7" />
-          <span className="text-xs font-semibold uppercase tracking-wider">
-            Upload
-          </span>
-        </div>
-      )}
-    </div>
-  </label>
-</div>
 
                 {/* Feature Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
@@ -580,10 +577,11 @@ const toggleInterest = (tag: string) => {
 
                 {/* CTA */}
                 <motion.div {...buttonClickInteraction}>
-                  <button
-                    onClick={goNext}
-                    className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm"
-                  >
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
                     Let&apos;s Go <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </motion.div>
@@ -909,6 +907,25 @@ const toggleInterest = (tag: string) => {
                   </div>
                 </div>
 
+                {/* Bio Input */}
+                <div>
+                  <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">
+                    Bio (Optional)
+                  </label>
+
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    maxLength={200}
+                    placeholder="What's your vibe?"
+                    className="w-full min-h-[90px] border border-[#c5c6cd] rounded-xl px-3.5 py-3 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 font-medium bg-white resize-none"
+                  />
+
+                  <p className="text-[10px] text-neutral-400 mt-1">
+                    {bio.length}/200
+                  </p>
+                </div>
+
                 {/* Navigation Buttons */}
                 <div className="flex gap-3">
                   <motion.div {...buttonClickInteraction} className="shrink-0">
@@ -921,11 +938,12 @@ const toggleInterest = (tag: string) => {
                     </button>
                   </motion.div>
                   <motion.div {...buttonClickInteraction} className="flex-1">
-                    <button
-                      type="button"
-                      onClick={goNext}
-                      className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm"
-                    >
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={!isProfileValid}
+                    className="w-full h-12 rounded-full text-xs font-bold bg-black text-white transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
                       Continue <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </motion.div>
