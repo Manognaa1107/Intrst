@@ -169,8 +169,8 @@ export default function HomePage() {
 
   const toggleSavePost = async (postId: string) => {
     if (!user_id) return;
-        console.log("Saving post:", postId);
-        console.log("User:", user_id);
+    console.log("Saving post:", postId);
+    console.log("User:", user_id);
 
     try {
       const isSaved = savedPosts.includes(postId);
@@ -181,11 +181,11 @@ export default function HomePage() {
           .delete()
           .eq("user_id", user_id)
           .eq("post_id", postId);
-        
+
 
         if (error) throw error;
         console.log("Insert success");
-        
+
         setSavedPosts(prev =>
           prev.filter(id => id !== postId)
         );
@@ -270,20 +270,20 @@ export default function HomePage() {
   const filteredPosts = activeTab === "All" ? posts : posts.filter(p => p.post_type === activeTab.toUpperCase().replace(/S$/, ''));
 
   return (
-    <div className="w-full min-h-screen bg-background relative flex flex-col md:flex-row overflow-hidden">
+    <div className="w-full min-h-screen bg-transparent relative flex flex-col md:flex-row overflow-hidden">
       {showPersonalityPrompt && (
         <PersonalityPrompt
           user_id={user_id}
           onComplete={() => setHasCompletedPersonality(true)}
         />
       )}
-      <div className="flex-1 max-w-full md:max-w-3xl mx-auto w-full min-w-0 border-l border-border/40 min-h-screen relative pb-20 overflow-x-hidden">  {/* Top Header - Mobile */}
-        <div className="md:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 pt-[calc(env(safe-area-inset-top)+64px)] px-4 pb-3 overflow-x-auto hide-scrollbar flex gap-2">
+      <div className="flex-1 max-w-full md:max-w-3xl mx-auto w-full min-w-0 min-h-screen relative pb-20 overflow-x-hidden">  {/* Top Header - Mobile */}
+        <div className="md:hidden sticky top-0 z-30 bg-white/40 backdrop-blur-xl border-b border-black/5 pt-[calc(env(safe-area-inset-top)+64px)] px-4 pb-3 overflow-x-auto hide-scrollbar flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/80 text-neutral-500 hover:bg-neutral-100 border border-black/5'
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/40 backdrop-blur-sm text-neutral-500 hover:text-black hover:bg-white border border-black/5 shadow-[0_1px_8px_rgba(0,0,0,0.01)]'
                 }`}
             >
               {tab}
@@ -292,12 +292,12 @@ export default function HomePage() {
         </div>
 
         {/* Top Header - Desktop */}
-        <div className="hidden md:flex sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40 px-6 py-4 gap-3 overflow-x-auto hide-scrollbar">
+        <div className="hidden md:flex sticky top-0 z-30 bg-white/40 backdrop-blur-xl border-b border-black/5 px-6 py-4 gap-3 overflow-x-auto hide-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/80 text-neutral-500 hover:bg-neutral-100 border border-black/5'
+              className={`px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition-all ${activeTab === tab ? 'bg-black text-white' : 'bg-white/40 backdrop-blur-sm text-neutral-500 hover:text-black hover:bg-white border border-black/5 shadow-[0_1px_8px_rgba(0,0,0,0.01)]'
                 }`}
             >
               {tab}
@@ -336,10 +336,10 @@ export default function HomePage() {
                       key={evt.event_id}
                       href={`/events/${evt.event_id}`}
                     >
-                      <div className="min-w-[240px] bg-white border border-black/5 rounded-[24px] p-4 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                      <div className="min-w-[240px] bg-white/80 backdrop-blur-sm border border-black/5 rounded-[24px] p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-0.5 hover:bg-white hover:border-black/10">
 
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-xl bg-neutral-100 overflow-hidden border border-black/5">
+                          <div className="w-8 h-8 rounded-xl bg-white overflow-hidden border border-black/5">
                             {evt.clubs?.logo_url ? (
                               <img
                                 src={evt.clubs.logo_url}
@@ -381,7 +381,7 @@ export default function HomePage() {
 
           {/* Fallback prompt banner when no interests selected */}
           {(!interests || interests.length === 0) && (
-            <Card className="p-6 bg-[#855300]/5 border border-[#855300]/10 rounded-2xl shadow-sm space-y-4 mb-6">
+            <Card className="p-6 bg-[#855300]/5 backdrop-blur-sm border border-[#855300]/10 rounded-[24px] shadow-sm space-y-4 mb-6">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300] shrink-0">
                   <span className="text-lg">✨</span>
@@ -395,7 +395,7 @@ export default function HomePage() {
               </div>
               <div className="flex gap-3 pl-[52px]">
                 <Link href="/profile/me">
-                  <Button className="h-9 px-5 bg-black hover:bg-[#505f78] text-white font-semibold rounded-xl text-xs transition-colors">
+                  <Button className="h-9 px-5 bg-black hover:bg-[#505f78] text-white font-semibold rounded-full text-xs transition-colors">
                     Set Interests
                   </Button>
                 </Link>
@@ -413,9 +413,9 @@ export default function HomePage() {
               <p>No posts yet. Be the first to post something!</p>
             </div>
           ) : filteredPosts.map((post) => (
-            <Card key={post.id} className="p-4 sm:p-5 bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all">
+            <Card key={post.id} className="p-5 sm:p-6 bg-white/80 backdrop-blur-sm border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white hover:border-black/10 transition-all duration-300">
               <div className="flex gap-3 mb-3">
-                <Avatar className="w-10 h-10 border border-border">
+                <Avatar className="w-10 h-10 border border-black/5">
                   <AvatarFallback className="bg-neutral-100 text-neutral-600 font-semibold">
                     {post.is_anonymous ? "A" : ((post.profiles?.name || "U")[0])}
                   </AvatarFallback>
@@ -479,18 +479,16 @@ export default function HomePage() {
                 </button> */}
                 <button
                   onClick={() => toggleSavePost(post.id)}
-                  className={`p-1.5 rounded-full transition-colors ${
-                    savedPosts.includes(post.id)
-                      ? "text-[#855300] bg-[#855300]/10"
-                      : "hover:bg-neutral-100 hover:text-black"
-                  }`}
+                  className={`p-1.5 rounded-full transition-colors ${savedPosts.includes(post.id)
+                    ? "text-[#855300] bg-[#855300]/10"
+                    : "hover:bg-neutral-100 hover:text-black"
+                    }`}
                 >
                   <BookmarkIcon
-                    className={`w-4 h-4 ${
-                      savedPosts.includes(post.id)
-                        ? "fill-current"
-                        : ""
-                    }`}
+                    className={`w-4 h-4 ${savedPosts.includes(post.id)
+                      ? "fill-current"
+                      : ""
+                      }`}
                   />
                 </button>
               </div>
@@ -499,7 +497,7 @@ export default function HomePage() {
               {expandedComments.has(post.id) && (
                 <div className="mt-4 ml-[52px] space-y-4 pt-4 border-t border-black/5 animate-in slide-in-from-top-2 duration-200">
                   <div className="flex gap-2">
-                    <Avatar className="w-8 h-8 border border-border">
+                    <Avatar className="w-8 h-8 border border-black/5">
                       <AvatarFallback className="bg-neutral-100 text-[10px] text-neutral-600">ME</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 flex gap-2">
@@ -509,7 +507,7 @@ export default function HomePage() {
                         value={commentInputs[post.id] || ""}
                         onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
                         onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                        className="flex-1 bg-neutral-50 border border-black/5 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-neutral-300 transition-colors"
+                        className="flex-1 bg-white/60 border border-black/5 rounded-full px-4 py-1.5 text-xs focus:outline-none focus:border-neutral-300 transition-colors placeholder:text-neutral-400"
                       />
                       <Button
                         size="sm"
@@ -533,13 +531,13 @@ export default function HomePage() {
 
                       {postComments[post.id]?.map((comment) => (
                         <div key={comment.id} className="flex gap-3">
-                          <Avatar className="w-7 h-7 border border-border">
+                          <Avatar className="w-7 h-7 border border-black/5">
                             <AvatarFallback className="bg-neutral-100 text-[9px] text-neutral-600">
                               {comment.profiles?.name?.[0] || "?"}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
-                            <div className="bg-neutral-50 border border-black/5 rounded-2xl p-2.5 px-3">
+                            <div className="bg-white/60 border border-black/5 rounded-[20px] p-3 px-4">
                               <h5 className="text-[11px] font-bold text-[#0f0f10]">{comment.profiles?.name || "Anonymous"}</h5>
                               <p className="text-sm text-neutral-800">{comment.comment}</p>
                             </div>
@@ -560,15 +558,15 @@ export default function HomePage() {
       {/* FAB */}
       <button
         onClick={() => setIsFabOpen(true)}
-        className="fixed bottom-[100px] md:bottom-8 right-4 md:right-8 w-14 h-14 bg-black hover:bg-[#505f78] active:scale-95 transition-all text-white rounded-full shadow-md flex items-center justify-center z-40"
+        className="absolute bottom-0 md:bottom-0 right-10 md:right-16 w-14 h-14 bg-black hover:bg-[#505f78] active:scale-95 transition-all text-white rounded-full shadow-md flex items-center justify-center z-40"
       >
         <PlusIcon className="w-6 h-6" />
       </button>
 
       {/* Create Post Modal */}
       {isFabOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white border border-black/5 sm:rounded-2xl rounded-t-2xl shadow-xl safe-area-bottom animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#faf9f6]/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white/90 backdrop-blur-xl border border-black/5 sm:rounded-[24px] rounded-t-[24px] shadow-2xl safe-area-bottom animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
             <div className="flex justify-between items-center p-4 border-b border-black/5">
               <h3 className="text-lg font-dmserif font-semibold text-[#0f0f10]">Create Post</h3>
               <button onClick={() => { setIsFabOpen(false); setIsAnonymous(false); }} className="p-2 text-neutral-500 hover:text-black hover:bg-neutral-100 rounded-full transition-colors">
@@ -582,7 +580,7 @@ export default function HomePage() {
                   <button
                     key={tag}
                     onClick={() => setPostTag(tag)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${postTag === tag ? getTagColor(tag) : 'bg-transparent text-neutral-500 border-black/5 hover:border-neutral-400'
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${postTag === tag ? getTagColor(tag) : 'bg-white/40 border-black/5 text-neutral-500 hover:text-black hover:bg-white'
                       }`}
                   >
                     {tag}
@@ -594,13 +592,13 @@ export default function HomePage() {
                 placeholder="What's on your mind?"
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
-                className="min-h-[150px] bg-white border border-black/5 rounded-xl p-3 focus-visible:ring-0 text-base resize-none placeholder:text-neutral-400"
+                className="min-h-[150px] bg-white/60 border border-black/5 rounded-[18px] p-3.5 focus-visible:ring-0 text-sm resize-none placeholder:text-neutral-400 focus:border-black/10 focus:bg-white transition-colors"
               />
 
               {/* Media Upload for Clubs */}
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2">
-                  <button className={`p-2 rounded-xl border flex items-center gap-2 text-xs font-semibold transition-all ${role === 'club' ? 'border-[#505f78]/30 bg-[#505f78]/5 text-[#505f78] hover:bg-[#505f78]/10' : 'border-black/5 bg-neutral-50 text-neutral-400 cursor-not-allowed'}`}>
+                  <button className={`px-3 py-1.5 rounded-full border flex items-center gap-2 text-xs font-semibold bg-white/40 border-black/5 hover:bg-white hover:border-black/10 transition-all ${role === 'club' ? 'text-[#505f78]' : 'text-neutral-400 cursor-not-allowed'}`}>
                     <PlusIcon className="w-4 h-4" /> Add Photo/Video
                   </button>
                   {role !== 'club' && (
@@ -612,12 +610,12 @@ export default function HomePage() {
               <div className="flex justify-between items-center pt-2">
                 <button
                   onClick={() => setIsAnonymous(!isAnonymous)}
-                  className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${isAnonymous ? 'bg-black text-white border border-black/10' : 'text-neutral-700 hover:bg-neutral-100'}`}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full border border-black/5 transition-colors flex items-center gap-2 ${isAnonymous ? 'bg-black text-white border border-black/10' : 'text-neutral-700 bg-white/40 hover:bg-white hover:border-black/10'}`}
                 >
                   <LockIcon className="w-4 h-4" /> {isAnonymous ? 'Posting Anonymously' : 'Anonymous'}
                 </button>
                 <Button
-                  className={`px-6 rounded-xl font-semibold ${postTag && postContent.trim() ? 'bg-black text-white hover:bg-[#505f78]' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                  className={`px-6 rounded-full font-semibold ${postTag && postContent.trim() ? 'bg-black text-white hover:bg-[#505f78]' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
                     }`}
                   disabled={!postTag || !postContent.trim() || isPosting}
                   onClick={handleCreatePost}

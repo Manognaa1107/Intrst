@@ -104,3 +104,44 @@
     scrollbar-width: none;
   }
 }
+
+/* Brand focus & active styles overrides to keep premium black theme */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[data-slot="button"]:focus-visible,
+[data-slot="input"]:focus-visible,
+[data-slot="textarea"]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px #faf9f6, 0 0 0 4px rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+button:active,
+[data-slot="button"]:active {
+  transform: scale(0.98) !important;
+  transition: transform 0.1s ease !important;
+}
+
+/* Ensure hover state of black buttons stays in the black/neutral family */
+.bg-black.hover\:bg-\[\#505f78\]:hover,
+button.bg-black:hover,
+[data-slot="button"].bg-black:hover,
+.bg-black:hover {
+  background-color: #262626 !important;
+  /* Lighter black / neutral-800 */
+}
+
+/* Ensure active/pressed black buttons stay in black theme */
+.bg-black.hover\:bg-\[\#505f78\]:active,
+button.bg-black:active,
+[data-slot="button"].bg-black:active,
+.bg-black:active,
+.bg-black.hover\:bg-\[\#505f78\]:focus,
+button.bg-black:focus,
+[data-slot="button"].bg-black:focus,
+.bg-black:focus {
+  background-color: #161617 !important;
+  /* Rich dark off-black */
+}

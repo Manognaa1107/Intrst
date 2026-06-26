@@ -15,8 +15,9 @@ import {
   Zap,
   Code,
   Music,
-  Palette
+  Palette,
 } from "lucide-react";
+import { FaInstagram, FaGithub } from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -124,7 +125,7 @@ export default function LandingPage() {
 
             <Link href="/signup">
               <motion.div {...buttonClickInteraction}>
-                <Button className="rounded-full px-5 h-9 text-xs font-bold bg-black text-white hover:bg-[#505f78] shadow-sm">
+                <Button className="rounded-full px-5 h-9 text-xs font-bold bg-black text-white hover:bg-neutral-800 shadow-sm">
                   Find My People
                 </Button>
               </motion.div>
@@ -193,7 +194,7 @@ export default function LandingPage() {
             {/* Primary */}
             <Link href="/discover">
               <motion.div {...buttonClickInteraction}>
-                <Button className="h-12 px-7 rounded-full text-sm font-bold bg-black text-white hover:bg-[#505f78] shadow-md flex items-center gap-2">
+                <Button className="h-12 px-7 rounded-full text-sm font-bold bg-black text-white hover:bg-neutral-800 shadow-md flex items-center gap-2">
                   Discover My Vibe <ArrowUpRight className="w-3.5 h-3.5" />
                 </Button>
               </motion.div>
@@ -588,7 +589,7 @@ export default function LandingPage() {
           {/* CTA Button */}
           <Link href="/discover">
             <motion.div {...buttonClickInteraction}>
-              <Button className="h-12 px-8 rounded-full bg-black text-white text-sm font-bold shadow-md hover:bg-[#505f78] transition-all flex items-center gap-2 mx-auto">
+              <Button className="h-12 px-8 rounded-full bg-black text-white text-sm font-bold shadow-md hover:bg-neutral-800 transition-all flex items-center gap-2 mx-auto">
                 Get Started Free
                 <ArrowUpRight className="w-4 h-4" />
               </Button>
@@ -603,10 +604,61 @@ export default function LandingPage() {
       </section>
 
       {/* =========================
+          CLUB CTA SECTION
+      ========================= */}
+      <section className="relative pb-24 px-6 z-10 bg-[#faf9f6]">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="w-full bg-white border border-black/5 rounded-3xl p-8 md:p-12 text-center shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden"
+          >
+            {/* Soft decorative background glow inside the card */}
+            <div className="absolute inset-0 pointer-events-none opacity-50">
+              <div className="absolute -left-20 -top-20 w-64 h-64 rounded-full bg-[#505f78]/5 blur-3xl" />
+              <div className="absolute -right-20 -bottom-20 w-64 h-64 rounded-full bg-[#855300]/5 blur-3xl" />
+            </div>
+
+            <div className="relative z-10 max-w-xl mx-auto">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#faf9f6] border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.02)] mb-6">
+                <Users className="w-3.5 h-3.5 text-[#505f78]" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                  For Campus Clubs
+                </span>
+              </div>
+
+              {/* Heading */}
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0f0f10] leading-tight mb-4">
+                Bring Your Club to INTRST
+              </h2>
+
+              {/* Subtext */}
+              <p className="text-neutral-500 text-xs sm:text-sm mb-8 leading-relaxed">
+                Reach more students, promote events, and build your community on campus.
+              </p>
+
+              {/* CTA Button */}
+              <Link href="/auth/club-request">
+                <motion.div {...buttonClickInteraction} className="inline-block">
+                  <Button className="h-11 px-8 rounded-full bg-black text-white text-xs font-bold shadow-md hover:bg-neutral-800 transition-all flex items-center gap-2">
+                    Request Club Access
+                    <ArrowUpRight className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* =========================
           FOOTER
       ========================= */}
       <footer className="relative border-t border-black/10 bg-[#faf9f6] py-10 px-6 z-10">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
 
           {/* Logo */}
           <div className="flex items-center gap-2.5">
@@ -618,23 +670,52 @@ export default function LandingPage() {
             </span>
           </div>
 
-          {/* Links */}
-          <div className="flex items-center gap-6 text-[11px] font-semibold text-neutral-400">
-            <Link href="#" className="hover:text-[#505f78] transition-colors">
+          {/* Center Links */}
+          <div className="flex flex-wrap items-center justify-center gap-6 text-[11px] font-medium text-neutral-500">
+            <Link href="#" className="hover:text-black transition-colors">
               Privacy Policy
             </Link>
-            <Link href="#" className="hover:text-[#505f78] transition-colors">
+
+            <Link href="#" className="hover:text-black transition-colors">
               Terms of Service
             </Link>
-            <a href="mailto:support@intrst.com" className="hover:text-[#505f78] transition-colors">
+
+            <a
+              href="mailto:support@intrst.com"
+              className="hover:text-black transition-colors"
+            >
               Contact
             </a>
           </div>
 
-          {/* Copyright */}
-          <p className="text-[10px] text-neutral-400 tracking-wide">
-            © 2026 intrst. Workspace mapping calibrated.
-          </p>
+          {/* Social Icons + Copyright */}
+          <div className="flex flex-col items-center gap-3">
+
+            <div className="flex items-center gap-4">
+              <a
+                href="https://instagram.com/intrst.in"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl border border-black/10 bg-white flex items-center justify-center hover:scale-105 transition-all"
+              >
+                <FaInstagram className="w-5 h-5 text-black" />
+              </a>
+
+              <a
+                href="https://github.com/Sampath04x/hmu-platform"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl border border-black/10 bg-white flex items-center justify-center hover:scale-105 transition-all"
+              >
+                <FaGithub className="w-5 h-5 text-black" />
+              </a>
+            </div>
+
+            <p className="text-[10px] text-neutral-400 tracking-wide text-center">
+              © 2026 intrst. Workspace mapping calibrated.
+            </p>
+
+          </div>
 
         </div>
       </footer>

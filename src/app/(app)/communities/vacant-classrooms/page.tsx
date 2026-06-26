@@ -270,8 +270,8 @@ export default function VacantClassrooms() {
                 onClick={() => setSelectedBuilding(building)}
                 variant={selectedBuilding === building ? "default" : "outline"}
                 className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${selectedBuilding === building
-                    ? "bg-black text-white shadow-sm"
-                    : "bg-white hover:bg-neutral-100 border border-black/5 text-[#0f0f10]"
+                  ? "bg-black text-white shadow-sm"
+                  : "bg-white hover:bg-neutral-100 border border-black/5 text-[#0f0f10]"
                   }`}
               >
                 {building}

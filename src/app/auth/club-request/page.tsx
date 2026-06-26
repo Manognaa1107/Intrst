@@ -11,6 +11,7 @@ import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star } from "luc
 import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 const DOMAINS = [
   "Technical",
@@ -23,7 +24,13 @@ const DOMAINS = [
   "Creative Arts"
 ];
 
-export default function ClubRequestPage() {
+const buttonClickInteraction = {
+  whileHover: { scale: 1.02, y: -1 },
+  whileTap: { scale: 0.98, y: 0 },
+  transition: { type: "spring" as const, stiffness: 400, damping: 15 }
+};
+
+export default function RedesignedClubRequestPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -90,99 +97,123 @@ export default function ClubRequestPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
         {/* Background elements */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-          <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
+          <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+          <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
         </div>
-        
-        <Card className="w-full max-w-lg z-10 border border-black/5 bg-white shadow-md p-8 text-center space-y-6 rounded-2xl">
-          <div className="flex justify-center">
-            <div className="w-20 h-20 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300]">
-              <CheckCircle2 className="w-10 h-10" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-md z-10"
+        >
+          <Card className="w-full border border-black/5 bg-white shadow-[0_24px_48px_rgba(0,0,0,0.03)] p-8 text-center space-y-6 rounded-[32px]">
+            <div className="flex justify-center">
+              <div className="w-20 h-20 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300]">
+                <CheckCircle2 className="w-10 h-10" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-3">
-             <h1 className="text-3xl font-dmserif font-bold text-[#0f0f10]">Application Received!</h1>
-             <p className="text-neutral-500 text-sm leading-relaxed">
-               Thank you for your interest in joining the intrst community. Our team will review your application for <strong className="text-black font-semibold">{formData.club_name}</strong> and get back to you at <strong className="text-black font-semibold">{formData.club_email}</strong>.
-             </p>
-          </div>
-          <div className="pt-4 border-t border-black/5">
-             <Link href="/signin">
-               <Button className="rounded-full h-12 px-8 bg-black hover:bg-[#505f78] text-white font-bold group">
-                 Back to Login
-               </Button>
-             </Link>
-          </div>
-        </Card>
+            <div className="space-y-3">
+              <h1 className="text-2xl font-dmserif font-bold text-[#0f0f10]">Application Received!</h1>
+              <p className="text-neutral-500 text-xs sm:text-sm leading-relaxed">
+                Thank you for your interest in joining the intrst community. Our team will review your application for <strong className="text-black font-semibold">{formData.club_name}</strong> and get back to you at <strong className="text-black font-semibold">{formData.club_email}</strong>.
+              </p>
+            </div>
+            <div className="pt-4 border-t border-black/5">
+              <Link href="/signin">
+                <motion.div {...buttonClickInteraction} className="inline-block">
+                  <Button className="rounded-full h-11 px-8 bg-black hover:bg-[#505f78] text-white font-bold group">
+                    Back to Login
+                  </Button>
+                </motion.div>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
-      {/* Background Blobs */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-        <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-        <div className="absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-40" />
-        <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
+    <main className="min-h-screen w-full flex items-start justify-center relative overflow-hidden p-6 pt-20 md:pt-24 lg:pt-32" style={{ backgroundColor: "#faf9f6" }}>
+      {/* Background Glow Decorations */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute left-[-20%] top-[10%] w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30"></div>
+        <div className="absolute right-[-20%] bottom-[10%] w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30"></div>
       </div>
 
-      {/* Left side: branding/info */}
-      <div className="w-full md:w-1/2 lg:w-2/5 p-8 md:p-16 flex flex-col justify-center space-y-12 relative overflow-hidden border-r border-black/5 z-10">
-        <Link href="/" className="inline-flex items-center gap-2 group text-neutral-500 hover:text-black transition-colors">
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span className="text-xs font-bold uppercase tracking-widest">Back Home</span>
-        </Link>
-        
-        <div className="space-y-6 relative">
-          <div className="w-14 h-14 rounded-2xl bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300] mb-8">
-            <Trophy className="w-6 h-6" />
+      <div className="w-full max-w-5xl grid lg:grid-cols-12 gap-8 lg:gap-16 items-start relative z-10">
+
+        {/* Left Side Content */}
+        <div className="lg:col-span-5 hidden lg:flex flex-col justify-center space-y-10 pt-4">
+          <div className="relative z-20 max-w-md select-none">
+            <Link href="/" className="inline-flex items-center gap-2 group text-neutral-500 hover:text-black transition-colors mb-6">
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              <span className="text-xs font-bold uppercase tracking-widest">Back Home</span>
+            </Link>
+
+            <div className="space-y-6">
+              <div className="w-14 h-14 rounded-2xl bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300] mb-4">
+                <Trophy className="w-6 h-6" />
+              </div>
+              <h1 className="text-4xl xl:text-5xl font-bold tracking-tight leading-[1.1] text-[#0f0f10]">
+                Elevate Your <br />
+                <span className="bg-gradient-to-r from-[#505f78] to-[#855300] bg-clip-text text-transparent font-serif italic font-normal pr-4 inline-block">
+                  Club&apos;s Presence.
+                </span>
+              </h1>
+              <p className="text-sm text-neutral-500 font-normal leading-relaxed">
+                The intrst platform is the exclusive campus community for clubs to host events, engage with members, and grow their influence.
+              </p>
+            </div>
           </div>
-          <h1 className="text-4xl lg:text-5xl font-dmserif font-bold tracking-tight leading-[1.1] text-[#0f0f10]">
-            Elevate Your <br />
-            <span className="bg-gradient-to-r from-[#505f78] to-[#855300] bg-clip-text text-transparent font-serif italic font-normal">
-              Club&apos;s Presence.
-            </span>
-          </h1>
-          <p className="text-base text-neutral-500 font-normal leading-relaxed max-w-sm">
-            The intrst platform is the exclusive Gitam community for clubs to host events, engage with members, and grow their influence.
-          </p>
-        </div>
 
-        <div className="space-y-6 pt-8 border-t border-black/5 relative">
-           <div className="flex items-start gap-4">
+          <div className="space-y-6 pt-8 border-t border-black/5 relative max-w-md">
+            <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-[#505f78]/10 border border-[#505f78]/20 flex items-center justify-center text-[#505f78] shrink-0">
-                 <Users className="w-5 h-5" />
+                <Users className="w-5 h-5" />
               </div>
               <div>
-                 <h3 className="font-bold text-[#0f0f10] uppercase tracking-widest text-[10px] mb-0.5">Engage Students</h3>
-                 <p className="text-xs text-neutral-500 leading-relaxed">Reach a wider audience and get more registrations for your events.</p>
+                <h3 className="font-bold text-[#0f0f10] uppercase tracking-widest text-[10px] mb-0.5">Engage Students</h3>
+                <p className="text-xs text-neutral-500 leading-relaxed">Reach a wider audience and get more registrations for your events.</p>
               </div>
-           </div>
-           <div className="flex items-start gap-4">
+            </div>
+            <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300] shrink-0">
-                 <Star className="w-5 h-5 fill-[#855300]/20" />
+                <Star className="w-5 h-5 fill-[#855300]/20" />
               </div>
               <div>
-                 <h3 className="font-bold text-[#0f0f10] uppercase tracking-widest text-[10px] mb-0.5">Official Verification</h3>
-                 <p className="text-xs text-neutral-500 leading-relaxed">Get the blue checkmark and official status on campus.</p>
+                <h3 className="font-bold text-[#0f0f10] uppercase tracking-widest text-[10px] mb-0.5">Official Verification</h3>
+                <p className="text-xs text-neutral-500 leading-relaxed">Get the blue checkmark and official status on campus.</p>
               </div>
-           </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Right side: Request Form */}
-      <div className="w-full md:w-1/2 lg:w-3/5 p-8 md:p-16 flex items-center justify-center z-10 overflow-y-auto">
-        <Card className="w-full max-w-xl border border-black/5 bg-white shadow-sm p-6 sm:p-10 rounded-2xl">
-           <CardHeader className="p-0 mb-8">
-              <CardTitle className="text-2xl font-dmserif font-bold text-[#0f0f10] mb-1.5">Request Access</CardTitle>
-              <CardDescription className="text-neutral-500 text-xs">Please provide your club details for manual verification.</CardDescription>
-           </CardHeader>
-           <CardContent className="p-0">
+        {/* Right Side: Form Card Container */}
+        <div className="lg:col-span-7 flex flex-col items-center lg:items-end w-full">
+
+          {/* Back Home for Mobile */}
+          <div className="w-full flex lg:hidden justify-start mb-6">
+            <Link href="/" className="inline-flex items-center gap-2 group text-neutral-500 hover:text-black transition-colors">
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              <span className="text-xs font-bold uppercase tracking-widest">Back Home</span>
+            </Link>
+          </div>
+
+          <Card className="w-full max-w-[540px] border border-neutral-200/60 shadow-[0_24px_48px_rgba(0,0,0,0.03)] p-6 sm:p-10 rounded-[32px] bg-white">
+            <CardHeader className="p-0 mb-8 text-center sm:text-left">
+              <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm mb-3 mx-auto sm:mx-0">i</div>
+              <CardTitle className="text-2xl font-bold tracking-tight text-[#0f0f10] mb-1.5">
+                Request <span className="font-serif italic font-normal text-[#505f78]">Access</span>
+              </CardTitle>
+              <CardDescription className="text-neutral-500 text-xs font-medium">Please provide your club details for manual verification.</CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-0">
               <form onSubmit={handleRequest} className="space-y-6">
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
@@ -190,21 +221,21 @@ export default function ClubRequestPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Club Name</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Name</Label>
                     <Input
                       id="club_name"
                       name="club_name"
                       placeholder="e.g. Code Wizards"
                       value={formData.club_name}
                       onChange={handleChange}
-                      className="bg-white border-neutral-200 rounded-xl h-12 focus:border-[#505f78] focus-visible:ring-[#505f78] text-[#0f0f10] placeholder:text-neutral-400"
+                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Contact Email</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
                     <Input
                       id="club_email"
                       name="club_email"
@@ -212,34 +243,34 @@ export default function ClubRequestPage() {
                       placeholder="club@gitam.in"
                       value={formData.club_email}
                       onChange={handleChange}
-                      className="bg-white border-neutral-200 rounded-xl h-12 focus:border-[#505f78] focus-visible:ring-[#505f78] text-[#0f0f10] placeholder:text-neutral-400"
+                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                       required
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">President / Representative Name</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">President / Representative Name</Label>
                   <Input
                     id="president_name"
                     name="president_name"
                     placeholder="Full Name"
                     value={formData.president_name}
                     onChange={handleChange}
-                    className="bg-white border-neutral-200 rounded-xl h-12 focus:border-[#505f78] focus-visible:ring-[#505f78] text-[#0f0f10] placeholder:text-neutral-400"
+                    className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                     required
                   />
                 </div>
 
                 {/* Multi-select Club Domains */}
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Club Domains (Select up to 3)</Label>
-                    <span className="text-[10px] font-bold text-[#855300]">
+                    <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Domains (Select up to 3)</Label>
+                    <span className="text-[10px] font-bold text-[#855300] tracking-wide">
                       {selectedDomains.length} / 3 selected
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="flex flex-wrap gap-2 pt-0.5">
                     {DOMAINS.map((domain) => {
                       const isSelected = selectedDomains.includes(domain);
                       return (
@@ -247,11 +278,10 @@ export default function ClubRequestPage() {
                           type="button"
                           key={domain}
                           onClick={() => handleDomainToggle(domain)}
-                          className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
-                            isSelected
-                              ? "bg-black border-black text-white shadow-sm"
-                              : "bg-[#faf9f6] border-black/5 text-neutral-600 hover:bg-neutral-100"
-                          }`}
+                          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${isSelected
+                            ? "bg-black border-black text-white shadow-sm"
+                            : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
+                            }`}
                         >
                           {domain}
                         </button>
@@ -260,43 +290,48 @@ export default function ClubRequestPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[10px]">Short Description</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Short Description</Label>
                   <Textarea
                     id="description"
                     name="description"
                     placeholder="Briefly describe your club's mission and regular activities..."
                     value={formData.description}
                     onChange={handleChange}
-                    className="bg-white border-neutral-200 rounded-xl min-h-[120px] focus:border-[#505f78] focus-visible:ring-[#505f78] text-[#0f0f10] placeholder:text-neutral-400"
+                    className="bg-white border-[#c5c6cd] rounded-xl min-h-[100px] focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                   />
                 </div>
 
-                <Button
-                  className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-xl transition-all shadow-sm group"
-                  type="submit"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting Request...
-                    </>
-                  ) : (
-                    <>
-                      Send Join Request <Send className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </>
-                  )}
-                </Button>
+                <motion.div {...buttonClickInteraction} className="pt-2">
+                  <Button
+                    className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting Request...
+                      </>
+                    ) : (
+                      <>
+                        Send Join Request
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
               </form>
-           </CardContent>
-           <CardFooter className="p-0 mt-8 justify-center">
-              <p className="text-xs text-neutral-500">
-                 Already verified? <Link href="/signin" className="text-[#855300] font-bold underline hover:text-black transition-colors">Sign in here</Link>
+            </CardContent>
+
+            <CardFooter className="bg-transparent p-0 mt-8 flex justify-center items-center border-0">
+              <p className="text-xs text-neutral-500 font-medium">
+                Already verified? <Link href="/signin" className="text-[#855300] font-bold underline hover:text-black transition-colors">Sign in here</Link>
               </p>
-           </CardFooter>
-        </Card>
+            </CardFooter>
+          </Card>
+        </div>
+
       </div>
-    </div>
+    </main>
   );
 }
