@@ -38,8 +38,13 @@ export default function HomePage() {
   const fetchPosts = async () => {
     try {
       setIsLoading(true);
-      const data = await apiFetch("/posts");
-      setPosts(data?.posts || []);
+      const url = user_id ? `/posts?userId=${user_id}` : "/posts";
+      const data = await apiFetch(url);
+      const mappedPosts = (data?.posts || []).map((p: any) => ({
+        ...p,
+        likes_count: p.post_likes?.[0]?.count || 0,
+      }));
+      setPosts(mappedPosts);
     } catch (err) {
       console.error("Error fetching posts:", err);
     } finally {

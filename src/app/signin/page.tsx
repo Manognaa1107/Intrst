@@ -76,7 +76,7 @@ export default function SignInPage() {
         if (error) throw error;
 
         if (data?.session) {
-          router.push("/home");
+          window.location.href = "/home";
         }
       } else {
         await handleSendOtp();
@@ -111,7 +111,7 @@ export default function SignInPage() {
   return (
     <main className="min-h-screen w-full flex items-center justify-center relative overflow-hidden stitch-font-inter p-6" style={{ backgroundColor: "#faf9f6" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
         .stitch-font-inter {
           font-family: 'Inter', sans-serif;
         }
@@ -121,6 +121,10 @@ export default function SignInPage() {
         }
         .animate-fade-in {
           animation: fadeIn 0.25s ease-out forwards;
+        }
+        input::-ms-reveal,
+        input::-ms-clear {
+          display: none;
         }
       `}</style>
 
@@ -252,7 +256,7 @@ export default function SignInPage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
                       >
-                        {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {showPassword ? <Eye size={14} /> : <EyeOff size={14} />}
                       </button>
                     </div>
 
