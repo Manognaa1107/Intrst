@@ -41,16 +41,26 @@ export default function UserProfilePage() {
   useEffect(() => {
     async function fetchProfileData() {
       try {
+        const postsUrl = currentUserId
+          ? `/posts?user_id=${userId}&userId=${currentUserId}`
+          : `/posts?user_id=${userId}`;
+
         const [profileData, eventsData, postsData, followersData] = await Promise.all([
           apiFetch(`/profiles/${userId}`),
           apiFetch(`/events?created_by=${userId}`),
-          apiFetch(`/posts?user_id=${userId}`), // Assuming this filter works, or fallback to frontend filtering
+          apiFetch(postsUrl),
           apiFetch(`/profiles/${userId}/followers`)
         ]);
 
         setProfile(profileData);
         setEvents(eventsData || []);
-        setPosts(postsData || []);
+        
+        const mappedPosts = (postsData?.posts || []).map((p: any) => ({
+          ...p,
+          likes_count: p.post_likes?.[0]?.count || 0,
+          comments_count: p.post_comments?.[0]?.count || 0,
+        }));
+        setPosts(mappedPosts);
 
         if (followersData && Array.isArray(followersData)) {
           const isUserFollowing = followersData.some((f: any) => f.follower_id === currentUserId);
@@ -106,11 +116,21 @@ export default function UserProfilePage() {
   const isClub = profile.role === "club";
 
   return (
-    <div className="min-h-screen bg-background pb-28">
-      {/* Cover */}
-      <div className="h-44 md:h-52 bg-gradient-to-br from-[#e9e6df]/50 via-[#f3f1eb]/50 to-[#f0ede6]/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
-        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background" />
+    <div className="min-h-screen relative overflow-x-hidden pb-28" style={{ backgroundColor: "#faf9f6" }}>
+      {/* Background Glow Decorations (Consistent with Landing/Sign In Pages) */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        <div className="absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-45" />
+        <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-40" />
+      </div>
+
+      <div className="relative z-10">
+        {/* Cover */}
+        <div className="h-44 md:h-52 bg-gradient-to-r from-[#505f78]/15 via-[#f3f1eb]/35 to-[#855300]/15 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#faf9f6]" />
+        </div>
       </div>
 
       {/* Profile Header */}
@@ -164,8 +184,8 @@ export default function UserProfilePage() {
                 onClick={handleFollowToggle}
                 variant={isFollowing ? "outline" : "default"}
                 className={`flex-1 h-12 font-semibold rounded-full gap-2 transition-all ${isFollowing
-                    ? "border border-black/10 text-neutral-800 hover:bg-[#f3f1eb]"
-                    : "bg-black hover:bg-[#505f78] text-white shadow-sm"
+                  ? "border border-black/10 text-neutral-800 hover:bg-[#f3f1eb]"
+                  : "bg-black hover:bg-[#505f78] text-white shadow-sm"
                   }`}
               >
                 <UserPlusIcon className="w-4 h-4" />

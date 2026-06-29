@@ -145,3 +145,9 @@ button.bg-black:focus,
   background-color: #161617 !important;
   /* Rich dark off-black */
 }
+
+/* Hide default browser password reveal and clear buttons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

@@ -199,6 +199,10 @@ export default function SignupPage() {
         .animate-fade-in {
           animation: fadeIn 0.25s ease-out forwards;
         }
+        input::-ms-reveal,
+        input::-ms-clear {
+          display: none;
+        }
       `}</style>
 
       {/* Background Glow Decorations */}
@@ -313,7 +317,7 @@ export default function SignupPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
                   >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showPassword ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
               </div>
@@ -336,7 +340,7 @@ export default function SignupPage() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
                   >
-                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showConfirmPassword ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
               </div>
