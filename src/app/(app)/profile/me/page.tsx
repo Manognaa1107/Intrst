@@ -128,7 +128,7 @@ export default function MyProfilePage() {
   // const fetchSavedPosts = async () => {
   //   if (!user_id) return;
   //   console.log("Fetching saved posts for:", user_id);
-    
+
   //   try {
   //     const { data, error } = await supabase
   //       .from("saved_posts")
@@ -215,7 +215,7 @@ export default function MyProfilePage() {
       setPasswordMsg("Request timed out. Please try again.");
     }, 8000);
     try {
-      const { data: {session} } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       // console.log("Session before update:", sessionData.session);
       if (!session) {
         clearTimeout(timeout);
@@ -241,7 +241,7 @@ export default function MyProfilePage() {
       clearTimeout(timeout);
       setPasswordMsg(err.message || "Failed to update password");
       setPasswordLoading(false);
-    } 
+    }
   };
 
   // ← ADDED: export data handler
@@ -291,7 +291,7 @@ export default function MyProfilePage() {
   const interests = profile?.interests?.map(i => i.interests.interest) || contextInterests;
   const role = profile?.role || contextRole;
 
-  const TABS = role === "club" ? 
+  const TABS = role === "club" ?
     (["Posts", "Insights", "Settings"] as const) :
     (["Posts", "Saved", "Connections", "Clubs", "Settings"] as const);
 
@@ -304,56 +304,65 @@ export default function MyProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative overflow-x-hidden" style={{ backgroundColor: "#faf9f6" }}>
+      {/* Background Glow Decorations (Consistent with Landing Page) */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        <div className="absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-45" />
+        <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-40" />
+      </div>
 
-      {/* ← ADDED: Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-dmserif text-xl font-bold text-white">Change Password</h3>
+      <div className="relative z-10">
+        {/* ← ADDED: Password Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white border border-black/5 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+              <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Change Password</h3>
 
-            {passwordMsg && (
-              <p className={`text-sm ${passwordMsg.includes("success") ? "text-emerald-400" : "text-red-400"}`}>
-                {passwordMsg}
-              </p>
-            )}
+              {passwordMsg && (
+                <p className={`text-xs font-semibold ${passwordMsg.includes("success") ? "text-emerald-600" : "text-red-600"}`}>
+                  {passwordMsg}
+                </p>
+              )}
 
-            <input
-              type="password"
-              placeholder="New password (min 6 characters)"
-              className="w-full bg-background border border-border rounded-xl px-4 h-12 text-sm text-white focus:outline-none focus:border-brand"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
+              <input
+                type="password"
+                placeholder="New password (min 6 characters)"
+                className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium bg-white"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setNewPassword("");
-                  setPasswordMsg("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-brand hover:opacity-90"
-                onClick={handleChangePassword}
-                disabled={passwordLoading || newPassword.length < 6}
-              >
-                {passwordLoading ? "Updating..." : "Update"}
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-full border border-black/10 bg-white text-black font-bold hover:bg-[#f3f1eb] transition-all text-xs h-10"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setNewPassword("");
+                    setPasswordMsg("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 rounded-full bg-black hover:bg-neutral-800 text-white font-bold transition-all text-xs h-10 disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={handleChangePassword}
+                  disabled={passwordLoading || newPassword.length < 6}
+                >
+                  {passwordLoading ? "Updating..." : "Update"}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ─── Cover Banner ─── */}
-      <div className="h-44 bg-gradient-to-br from-[#e9e6df]/50 via-[#f3f1eb]/50 to-[#f0ede6]/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
-        <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background" />
+        {/* ─── Cover Banner ─── */}
+        <div className="h-44 bg-gradient-to-r from-[#505f78]/15 via-[#f3f1eb]/35 to-[#855300]/15 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#faf9f6]" />
+        </div>
       </div>
 
       {/* ─── Profile Header ─── */}
@@ -426,8 +435,8 @@ export default function MyProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Professor Reviews Card */}
           <div className={`p-5 rounded-2xl border transition-all duration-300 relative flex flex-col justify-between ${(!profile?.is_approved || userPosts.length === 0)
-              ? "bg-neutral-50 border-black/5 opacity-60"
-              : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
+            ? "bg-neutral-50 border-black/5 opacity-60"
+            : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
             }`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -461,8 +470,8 @@ export default function MyProfilePage() {
 
           {/* Vacant Class Reporting Card */}
           <div className={`p-5 rounded-2xl border transition-all duration-300 relative flex flex-col justify-between ${(!profile?.is_approved || userPosts.length === 0)
-              ? "bg-neutral-50 border-black/5 opacity-60"
-              : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
+            ? "bg-neutral-50 border-black/5 opacity-60"
+            : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
             }`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -505,8 +514,8 @@ export default function MyProfilePage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === tab
-                  ? "bg-black text-white shadow-sm"
-                  : "text-neutral-500 hover:text-black hover:bg-neutral-100"
+                ? "bg-black text-white shadow-sm"
+                : "text-neutral-500 hover:text-black hover:bg-neutral-100"
                 }`}
             >
               {tab}
@@ -514,71 +523,96 @@ export default function MyProfilePage() {
           ))}
         </div>
 
-      {activeTab === "Insights" && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-              <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
-              <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">428</div>
-              <div className="text-xs text-emerald-600 font-bold mt-2">+12% from last week</div>
+        {activeTab === "Posts" && (
+          <div className="space-y-4">
+            {userPosts.length === 0 ? (
+              <p className="text-neutral-500 text-center py-8">No posts yet.</p>
+            ) : (
+              userPosts.map((post) => (
+                <Card key={post.id} className="p-5 bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all text-left">
+                  <Badge className="mb-3 rounded-full bg-[#505f78]/10 text-[#505f78] border border-[#505f78]/20" variant="outline">
+                    {post.post_type || "General"}
+                  </Badge>
+                  <p className="text-[#0f0f10] leading-relaxed mb-4">{post.content}</p>
+                  <div className="flex items-center gap-5 text-neutral-500 text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <ThumbsUpIcon className="w-4 h-4" /> {post.post_likes?.[0]?.count || (post.post_likes as any)?.count || 0}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <MessageCircleIcon className="w-4 h-4" /> {post.post_comments?.[0]?.count || (post.post_comments as any)?.count || 0}
+                    </span>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "Insights" && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
+                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
+                <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">428</div>
+                <div className="text-xs text-emerald-600 font-bold mt-2">+12% from last week</div>
+              </Card>
+
+              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
+                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
+                <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">1.8k</div>
+                <div className="text-xs text-emerald-600 font-bold mt-2">+24% from last week</div>
+              </Card>
+            </div>
+
+            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">
+                  Engagement Trends
+                </h3>
+                <div className="text-xs font-bold uppercase tracking-widest text-[#855300]">
+                  Last 7 Days
+                </div>
+              </div>
+
+              <div className="h-48 flex items-end justify-between gap-3 px-2">
+                {[45, 78, 56, 92, 45, 67, 88].map((val, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                    <div
+                      className="w-full bg-[#505f78]/10 rounded-t-lg transition-all group-hover:bg-[#505f78] relative"
+                      style={{ height: `${val}%` }}
+                    >
+                      <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-black">
+                        {val}
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold text-neutral-400">
+                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </Card>
 
-            <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-              <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
-              <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">1.8k</div>
-              <div className="text-xs text-emerald-600 font-bold mt-2">+24% from last week</div>
+            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm space-y-6">
+              <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Top Interactions</h3>
+              <div className="space-y-4">
+                {[
+                  { label: "Hearts & Likes", count: "1,240", icon: ThumbsUpIcon, color: "text-rose-600" },
+                  { label: "Community Shares", count: "215", icon: Shield, color: "text-blue-600" },
+                  { label: "Profile Views", count: "890", icon: UserIcon, color: "text-[#855300]" },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-black/5">
+                    <div className="flex items-center gap-3">
+                      <item.icon className={`w-5 h-5 ${item.color}`} />
+                      <span className="text-sm font-medium text-[#0f0f10]">{item.label}</span>
+                    </div>
+                    <span className="font-dmserif font-bold text-[#0f0f10]">{item.count}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           </div>
-
-          <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">
-                Engagement Trends
-              </h3>
-              <div className="text-xs font-bold uppercase tracking-widest text-[#855300]">
-                Last 7 Days
-              </div>
-            </div>
-
-            <div className="h-48 flex items-end justify-between gap-3 px-2">
-              {[45, 78, 56, 92, 45, 67, 88].map((val, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                  <div
-                    className="w-full bg-[#505f78]/10 rounded-t-lg transition-all group-hover:bg-[#505f78] relative"
-                    style={{ height: `${val}%` }}
-                  >
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity text-black">
-                      {val}
-                    </div>
-                  </div>
-                  <span className="text-[10px] uppercase font-bold text-neutral-400">
-                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'][i]}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm space-y-6">
-            <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Top Interactions</h3>
-            <div className="space-y-4">
-              {[
-                { label: "Hearts & Likes", count: "1,240", icon: ThumbsUpIcon, color: "text-rose-600" },
-                { label: "Community Shares", count: "215", icon: Shield, color: "text-blue-600" },
-                { label: "Profile Views", count: "890", icon: UserIcon, color: "text-[#855300]" },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-neutral-50 border border-black/5">
-                  <div className="flex items-center gap-3">
-                    <item.icon className={`w-5 h-5 ${item.color}`} />
-                    <span className="text-sm font-medium text-[#0f0f10]">{item.label}</span>
-                  </div>
-                  <span className="font-dmserif font-bold text-[#0f0f10]">{item.count}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
+        )}
 
         {activeTab === "Connections" && (
           <div className="space-y-6">
@@ -721,8 +755,8 @@ export default function MyProfilePage() {
                                 }
                               }}
                               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${isSelected
-                                  ? "bg-black text-white border-black"
-                                  : "bg-neutral-50 text-neutral-500 border-black/5 hover:border-neutral-300"
+                                ? "bg-black text-white border-black"
+                                : "bg-neutral-50 text-neutral-500 border-black/5 hover:border-neutral-300"
                                 }`}
                             >
                               {domain}
@@ -811,14 +845,14 @@ export default function MyProfilePage() {
                   </p>
                   <div className="space-y-3">
                     <div className="flex gap-2">
-                    <input
-                      type="email"
-                      placeholder="admin@student.gitam.edu"
-                      className="flex-1 bg-white border border-black/5 h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-[#505f78] text-[#0f0f10]"
-                    />
-                    <Button size="sm" className="bg-black text-white hover:bg-[#505f78] rounded-lg">
-                      Add
-                    </Button>
+                      <input
+                        type="email"
+                        placeholder="admin@student.gitam.edu"
+                        className="flex-1 bg-white border border-black/5 h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-[#505f78] text-[#0f0f10]"
+                      />
+                      <Button size="sm" className="bg-black text-white hover:bg-[#505f78] rounded-lg">
+                        Add
+                      </Button>
                     </div>
 
                     {/* Placeholder for list of admins */}
@@ -833,7 +867,7 @@ export default function MyProfilePage() {
                   </div>
                 </Card>
               </div>
-            )};
+            )}
 
             {/* Account */}
             <div>

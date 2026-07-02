@@ -101,7 +101,7 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-      
+
       // 2. Sign up with Supabase
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -120,43 +120,43 @@ export default function SignupPage() {
         email: formData.email,
         timestamp: new Date().getTime()
       }));
-    
-    // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
-    if (data?.session) {
-      try {
-        await apiFetch("/auth/initialize-profile", {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: data.user?.id,
-            email: formData.email,
-            name: formData.name,
-            username: formData.username,
-          }),
-        });
-      } catch (initErr) {
-        console.error("Auto-initialization failed:", initErr);
+
+      // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
+      if (data?.session) {
+        try {
+          await apiFetch("/auth/initialize-profile", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: data.user?.id,
+              email: formData.email,
+              name: formData.name,
+              username: formData.username,
+            }),
+          });
+        } catch (initErr) {
+          console.error("Auto-initialization failed:", initErr);
+        }
+
+        router.push("/onboarding");
+        return;
       }
 
-      router.push("/onboarding");
-      return;
-    }
+      // 5. Wait then send OTP
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // 5. Wait then send OTP
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: formData.email,
+        options: { shouldCreateUser: false },
+      });
 
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: formData.email,
-      options: { shouldCreateUser: false },
-    });
+      if (otpError) {
+        console.warn("OTP resend skipped:", otpError.message);
+      }
 
-    if (otpError) {
-      console.warn("OTP resend skipped:", otpError.message);
-    }
-
-    // 6. Always redirect to verify
-    router.push(
-      `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
-    );
+      // 6. Always redirect to verify
+      router.push(
+        `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
+      );
     } catch (err: any) {
       console.error("Signup process failed:", err);
       setError(err.message || "An error occurred during signup.");
@@ -165,25 +165,25 @@ export default function SignupPage() {
     }
   };
   const handleGoogleSignUp = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const { error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-              redirectTo: `${window.location.origin}/auth/callback`,
-              queryParams: {
-              prompt: "select_account",
-              },
-            },
-          });
-          if (error) throw error;
-          // No need to router.push — Supabase redirects automatically
-        } catch (err: any) {
-          setError(err.message || "Google sign in failed.");
-          setLoading(false);
-        }
-      };
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+      if (error) throw error;
+      // No need to router.push — Supabase redirects automatically
+    } catch (err: any) {
+      setError(err.message || "Google sign in failed.");
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen w-full flex items-start justify-center relative overflow-hidden stitch-font-inter p-6 pt-20 md:pt-24 lg:pt-32" style={{ backgroundColor: "#faf9f6" }}>
@@ -198,6 +198,10 @@ export default function SignupPage() {
         }
         .animate-fade-in {
           animation: fadeIn 0.25s ease-out forwards;
+        }
+        input::-ms-reveal,
+        input::-ms-clear {
+          display: none;
         }
       `}</style>
 
@@ -313,7 +317,7 @@ export default function SignupPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
                   >
-                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showPassword ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
               </div>
@@ -336,7 +340,7 @@ export default function SignupPage() {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
                   >
-                    {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {showConfirmPassword ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
               </div>
@@ -392,18 +396,12 @@ export default function SignupPage() {
               Already have an account? <Link href="/signin" className="text-[#505f78] font-bold hover:underline">Sign In</Link>
             </p>
 
-            <p className="text-center text-[9px] text-neutral-300 mt-2.5 font-medium">
+            <p className="text-center text-[10px] text-neutral-400 mt-2.5 font-medium">
               Are you a Club / Organization? <Link href="/auth/club-request" className="text-[#505f78] font-bold hover:underline">Request Access</Link>
             </p>
 
           </div>
 
-          {/* Footer Links */}
-          <div className="w-full max-w-[390px] mx-auto flex items-center justify-center gap-5 mt-5 text-[9px] tracking-wider font-bold text-neutral-400/80 select-none uppercase">
-            <Link href="#" className="hover:text-neutral-600 transition-colors">Privacy</Link>
-            <Link href="#" className="hover:text-neutral-600 transition-colors">Terms</Link>
-            <Link href="#" className="hover:text-neutral-600 transition-colors">Support</Link>
-          </div>
 
         </div>
       </div>

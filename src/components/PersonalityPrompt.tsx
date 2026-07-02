@@ -103,11 +103,15 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/80 backdrop-blur-3xl">
-      <div className="absolute inset-0 bg-brand/5 pointer-events-none" />
-      
-      <Card className="w-full max-w-2xl bg-card/40 border-border/40 rounded-[3rem] overflow-hidden shadow-[0_0_50px_rgba(194,105,42,0.15)] relative">
-        <CardContent className="p-12 md:p-16">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[#faf9f6]/95 backdrop-blur-xl">
+      {/* Background Glow Decorations */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+      </div>
+
+      <Card className="w-full max-w-2xl bg-white border border-black/5 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.04)] relative z-10">
+        <CardContent className="p-8 md:p-12">
           <AnimatePresence mode="wait">
             {!isFinishing ? (
               <motion.div 
@@ -115,42 +119,41 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
                 initial={{ opacity: 0, x: 20 }} 
                 animate={{ opacity: 1, x: 0 }} 
                 exit={{ opacity: 0, x: -20 }}
-                className="space-y-10"
+                className="space-y-8"
               >
                 <div className="flex items-center justify-between">
                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-2xl bg-brand/10 text-brand">
-                        <Sparkles className="w-6 h-6" />
+                      <div className="p-2 rounded-xl bg-[#faf9f6] border border-black/5 text-[#505f78] shadow-sm">
+                        <Sparkles className="w-5 h-5" />
                       </div>
-                      <span className="font-bold tracking-widest text-xs uppercase opacity-60">Character Discovery</span>
+                      <span className="font-bold tracking-widest text-[10px] uppercase text-neutral-400">Character Discovery</span>
                    </div>
-                   <div className="text-sm font-medium opacity-40">STEP {step + 1} / {QUESTIONS.length}</div>
+                   <div className="text-xs font-bold uppercase tracking-wider text-neutral-400">STEP {step + 1} / {QUESTIONS.length}</div>
                 </div>
 
-                <div className="space-y-4">
-                  <h2 className="text-4xl md:text-5xl font-dmserif font-bold leading-tight">
+                <div className="space-y-3 text-center">
+                  <h2 className="text-2xl sm:text-3xl font-dmserif font-bold text-[#0f0f10] leading-tight">
                     {QUESTIONS[step].text}
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    {QUESTIONS[step].options.map((opt) => (
                      <button
                        key={opt.value}
                        onClick={() => handleSelect(opt.value)}
-                       className="group flex flex-col items-center justify-center p-8 rounded-[2rem] bg-card border border-border/40 hover:border-brand/60 hover:bg-brand/5 transition-all duration-300 relative overflow-hidden h-48"
+                       className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-[#faf9f6] border border-black/5 hover:border-black/20 hover:bg-[#f3f1eb] transition-all duration-300 relative overflow-hidden h-40 shadow-sm"
                      >
-                        <div className="absolute top-0 left-0 w-full h-1 bg-brand opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <opt.icon className="w-10 h-10 mb-4 text-muted-foreground group-hover:text-brand transition-colors" />
-                        <span className="text-lg font-bold text-white group-hover:text-brand">{opt.label}</span>
+                        <opt.icon className="w-8 h-8 mb-3 text-[#505f78] group-hover:text-black transition-colors" />
+                        <span className="text-sm font-bold text-[#0f0f10] group-hover:text-black transition-colors">{opt.label}</span>
                      </button>
                    ))}
                 </div>
 
-                <div className="pt-4 flex justify-center">
+                <div className="pt-2 flex justify-center">
                    <div className="flex gap-2">
                       {QUESTIONS.map((_, i) => (
-                        <div key={i} className={`h-1.5 w-8 rounded-full transition-all ${i == step ? 'bg-brand' : 'bg-white/10'}`} />
+                        <div key={i} className={`h-1.5 w-6 rounded-full transition-all ${i === step ? 'bg-black' : 'bg-neutral-200'}`} />
                       ))}
                    </div>
                 </div>
@@ -159,13 +162,13 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }} 
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center text-center space-y-6 py-10"
+                className="flex flex-col items-center justify-center text-center space-y-5 py-8"
               >
-                 <div className="w-24 h-24 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
-                    <Zap className="w-12 h-12 text-brand" />
-                 </div>
-                 <h2 className="text-4xl md:text-5xl font-dmserif font-bold">Analysing...</h2>
-                 <p className="text-muted-foreground text-lg max-w-sm">Generating your campus identity based on your unique patterns.</p>
+                 <div className="w-20 h-20 rounded-full bg-[#505f78]/10 flex items-center justify-center animate-pulse">
+                    <Zap className="w-10 h-10 text-[#855300]" />
+                  </div>
+                 <h2 className="text-2xl sm:text-3xl font-dmserif font-bold text-[#0f0f10]">Analysing...</h2>
+                 <p className="text-neutral-500 text-sm max-w-xs leading-relaxed">Generating your campus identity based on your unique patterns.</p>
               </motion.div>
             )}
           </AnimatePresence>
