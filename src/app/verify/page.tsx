@@ -71,9 +71,8 @@ function VerifyContent() {
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: "email",
+        type: verifyType,
       });
-
       if (verifyError) {
         console.error("Supabase verification error details:", {
           message: verifyError.message,
