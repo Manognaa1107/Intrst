@@ -13,6 +13,8 @@ import { apiFetch } from "@/lib/apiClient";
 import { supabase } from "@/lib/supabase"; // ← ADDED
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { PostCard } from "@/components/PostCard";
+import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 
 interface ProfileData {
   name?: string;
@@ -34,8 +36,8 @@ interface UserPost {
   content: string;
   created_at: string;
   post_type?: string;
-  post_likes?: { count: number };
-  post_comments?: { count: number };
+  post_likes?: any;
+  post_comments?: any;
 }
 
 interface Connection {
@@ -62,6 +64,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 export default function MyProfilePage() {
   const { user_id, name: contextName, interests: contextInterests, role: contextRole } = useUser();
   const router = useRouter(); // ← ADDED
+  const { handleDeleteAccount, isDeleting } = useDeleteAccount(user_id);
 
   const [activeTab, setActiveTab] = useState("Posts");
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -260,22 +263,6 @@ export default function MyProfilePage() {
     }
   };
 
-  // ← ADDED: delete account handler
-  const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete your account? This cannot be undone."
-    );
-    if (!confirmed) return;
-    try {
-      console.log("Deleting account for user_id:", user_id);
-      const result = await apiFetch(`/profiles/${user_id}`, { method: "DELETE" });
-      console.log("Delete result:", result);
-      router.push("/");
-    } catch (err: any) {
-      console.log("Delete error:", err);
-      alert(err.message || "Failed to delete account");
-    }
-  };
 
   //Sign out handler
   const handleSignOut = async () => {
@@ -689,20 +676,12 @@ export default function MyProfilePage() {
               </div>
             ) : (
               savedPosts.map((post) => (
-                <Card
+                <PostCard
                   key={post.id}
-                  className="p-4 bg-white border border-black/5 rounded-2xl"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <Badge>{post.post_type}</Badge>
-
-                    <span className="text-xs text-neutral-500">
-                      {new Date(post.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <p className="text-sm">{post.content}</p>
-                </Card>
+                  post={post}
+                  user_id={user_id}
+                  isSaved={true}
+                />
               ))
             )}
           </div>
@@ -903,10 +882,11 @@ export default function MyProfilePage() {
                 </button>
 
                 <button
+                  disabled={isDeleting}
                   onClick={handleDeleteAccount}
-                  className="w-full text-left px-4 py-3.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  className={`w-full text-left px-4 py-3.5 text-sm text-red-600 hover:bg-red-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
                 >
-                  Delete Account
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
                 </button>
               </div>
             </div>

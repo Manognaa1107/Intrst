@@ -20,6 +20,8 @@ interface UserContextType {
   setEmail: (email: string) => void;
   username: string;
   setUsername: (username: string) => void;
+  profileImageUrl: string | null;
+  setProfileImageUrl: (url: string | null) => void;
   role: 'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator';
   setRole: (role: 'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator') => void;
   has_completed_personality: boolean;
@@ -49,6 +51,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [role, setRole] = useState<'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator'>('user');
   const [has_completed_personality, setHasCompletedPersonality] = useState(false);
   const [user_id, setUserId] = useState("");
@@ -76,13 +79,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             if (data.profile) {
               setName(data.profile.name || "User");
               setUsername(data.profile.username || "");
+              setProfileImageUrl(data.profile.profile_image_url || null);
               setRole(data.profile.role || 'user');
               setPermissions(data.profile.permissions || {});
               setHasCompletedPersonality(data.profile.has_completed_personality || false);
               setIsApproved(data.profile.is_approved !== false);
               setIsSuspended(data.profile.is_suspended || false);
               if (data.profile.ai_profile) setAiProfile(data.profile.ai_profile);
-            }} else {
+            }
+          } else {
             setIsLoggedIn(false);
           }
         } catch (e) {
@@ -107,15 +112,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           async (event, newSession) => {
             const newToken = newSession?.access_token || null;
             if (event === 'SIGNED_OUT') {
-               setToken(null);
-               setIsLoggedIn(false);
-               return;
+              setToken(null);
+              setIsLoggedIn(false);
+              return;
             }
             if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-               setToken(newToken);
-               await checkUser(newToken);
+              setToken(newToken);
+              await checkUser(newToken);
             } else if (event === 'TOKEN_REFRESHED') {
-               setToken(newToken);
+              setToken(newToken);
             }
           }
         );
@@ -140,6 +145,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       name, setName,
       email, setEmail,
       username, setUsername,
+      profileImageUrl, setProfileImageUrl,
       role, setRole,
       has_completed_personality, setHasCompletedPersonality,
       user_id, setUserId,

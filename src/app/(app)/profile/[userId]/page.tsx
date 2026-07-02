@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CheckCircle2Icon, LockIcon, UserPlusIcon, MessageSquareIcon, ThumbsUpIcon, MessageCircleIcon, MapPinIcon, ClockIcon } from "lucide-react";
 import { apiFetch } from "@/lib/apiClient";
 import { useUser } from "@/context/UserContext";
+import { PostCard } from "@/components/PostCard";
 
 const dateBlockColors = [
   "bg-[#f3f1eb]",
@@ -271,20 +272,11 @@ export default function UserProfilePage() {
               <p className="text-neutral-500 text-center py-8">No posts yet.</p>
             ) : (
               posts.map((post: any) => (
-                <Card key={post.post_id} className="p-5 bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all">
-                  <Badge className="mb-3 rounded-full bg-[#505f78]/10 text-[#505f78] border border-[#505f78]/20" variant="outline">
-                    {post.category || "General"}
-                  </Badge>
-                  <p className="text-[#0f0f10] leading-relaxed mb-4">{post.content}</p>
-                  <div className="flex items-center gap-5 text-neutral-500 text-sm">
-                    <button className="flex items-center gap-1.5 hover:text-black transition-colors">
-                      <ThumbsUpIcon className="w-4 h-4" /> {post.likes_count || 0}
-                    </button>
-                    <button className="flex items-center gap-1.5 hover:text-[#505f78] transition-colors">
-                      <MessageCircleIcon className="w-4 h-4" /> {post.comments_count || 0}
-                    </button>
-                  </div>
-                </Card>
+                <PostCard
+                  key={post.id || post.post_id}
+                  post={post}
+                  user_id={currentUserId}
+                />
               ))
             )}
           </TabsContent>

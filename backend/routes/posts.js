@@ -36,10 +36,16 @@ router.get("/", async (req, res) => {
       return p;
     });
 
+    const formattedPosts = scrubbedPosts.map(p => ({
+      ...p,
+      likes_count: p.post_likes?.[0]?.count || 0,
+      comments_count: p.post_comments?.[0]?.count || 0,
+    }));
+
     // 2. If userId is provided, check if this user has liked each post
-    let enrichedPosts = scrubbedPosts;
+    let enrichedPosts = formattedPosts;
     if (userId) {
-      const postIds = scrubbedPosts.map(p => p.id);
+      const postIds = formattedPosts.map(p => p.id);
       const { data: userLikes } = await supabase
         .from('post_likes')
         .select('post_id')
@@ -47,7 +53,7 @@ router.get("/", async (req, res) => {
         .in('post_id', postIds);
       
       const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
-      enrichedPosts = scrubbedPosts.map(p => ({
+      enrichedPosts = formattedPosts.map(p => ({
         ...p,
         user_has_liked: likedPostIds.has(p.id)
       }));
@@ -167,29 +173,59 @@ router.delete("/:postId", verifyAuth, async (req, res) => {
 
 // LIKE/UNLIKE post
 router.post("/:postId/like", verifyAuth, async (req, res) => {
-    const { postId } = req.params;
-    const userId = req.user.id;
+  const { postId } = req.params;
+  const userId = req.user.id;
 
-    try {
-        const { data: existing } = await supabase
-            .from("post_likes")
-            .select("*")
-            .eq("post_id", postId)
-            .eq("user_id", userId)
-            .single();
+  try {
+    // Get the post owner
+    const { data: post, error: postError } = await supabase
+      .from("posts")
+      .select("user_id")
+      .eq("id", postId)
+      .single();
 
-        if (existing) {
-            // Unlike
-            await supabase.from("post_likes").delete().eq("post_id", postId).eq("user_id", userId);
-            return res.json({ message: "Post unliked" });
-        }
-
-        // Like
-        await supabase.from("post_likes").insert([{ post_id: postId, user_id: userId }]);
-        res.json({ message: "Post liked" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (postError || !post) {
+      return res.status(404).json({ error: "Post not found" });
     }
+
+    // Prevent self-like
+    if (post.user_id === userId) {
+      return res.status(400).json({
+        error: "You cannot like your own post."
+      });
+    }
+
+    // Check if user already liked
+    const { data: existing, error: existingError } = await supabase
+      .from("post_likes")
+      .select("*")
+      .eq("post_id", postId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingError) {
+      return res.status(500).json({ error: existingError.message });
+    }
+
+    if (existing) {
+      await supabase
+        .from("post_likes")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", userId);
+
+      return res.json({ message: "Post unliked" });
+    }
+
+    await supabase
+      .from("post_likes")
+      .insert([{ post_id: postId, user_id: userId }]);
+
+    return res.json({ message: "Post liked" });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 export default router;
