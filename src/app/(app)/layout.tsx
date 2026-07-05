@@ -1,16 +1,62 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
 import { ApprovalGuard } from "@/components/ApprovalGuard";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { LogOutIcon } from "lucide-react";
 import { FaInstagram, FaGithub } from "react-icons/fa";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useDeleteAccount } from "@/hooks/useDeleteAccount";
+
+function ProfileMenu({ profileImageUrl, name, username, user_id }: { profileImageUrl: string | null, name: string, username: string, user_id?: string }) {
+  const router = useRouter();
+  const { handleDeleteAccount, isDeleting } = useDeleteAccount(user_id);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="relative w-8 h-8 rounded-full overflow-hidden border border-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 transition-all hover:border-black/20 flex shrink-0 items-center justify-center bg-white/50">
+        {profileImageUrl ? (
+          <img src={profileImageUrl} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          <Avatar className="w-full h-full flex items-center justify-center bg-[#505f78]/10 text-[#505f78]">
+            <AvatarFallback className="font-bold text-xs flex items-center justify-center h-full w-full bg-transparent">
+              {name ? name[0].toUpperCase() : (username ? username[0].toUpperCase() : "U")}
+            </AvatarFallback>
+          </Avatar>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 bg-white/90 backdrop-blur-xl border border-black/5 rounded-xl shadow-lg mt-2 p-1 z-50">
+        <DropdownMenuItem onClick={() => router.push('/profile/me')} className="cursor-pointer gap-2 py-2 px-3 text-sm font-medium rounded-lg hover:bg-black/5 focus:bg-black/5 outline-none transition-colors">
+          <UserIcon className="w-4 h-4" /> View Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/settings/password')} className="cursor-pointer gap-2 py-2 px-3 text-sm font-medium rounded-lg hover:bg-black/5 focus:bg-black/5 outline-none transition-colors">
+          <LockIcon className="w-4 h-4" /> Change Password
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-black/5 my-1" />
+        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 font-medium rounded-lg hover:bg-red-50 focus:bg-red-50 outline-none transition-colors">
+          <LogOutIcon className="w-4 h-4" /> Sign Out
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={isDeleting} onClick={handleDeleteAccount} className={`cursor-pointer gap-2 py-2 px-3 text-sm text-red-600 font-medium rounded-lg hover:bg-red-50 focus:bg-red-50 outline-none transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+          <Trash2Icon className="w-4 h-4" /> {isDeleting ? "Deleting..." : "Delete Account"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default function AppLayout({
   children,
@@ -18,8 +64,9 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { name, username, aiProfile, role } = useUser();
+  const { name, username, aiProfile, role, user_id, profileImageUrl } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
+
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,6 +216,7 @@ export default function AppLayout({
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
             )}
           </Link>
+          <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
         </div>
       </header>
 
@@ -220,9 +268,13 @@ export default function AppLayout({
               </>
             ) : (
               <>
-                <Avatar className="w-10 h-10 border border-black/5 shrink-0">
-                  <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{name[0]}</AvatarFallback>
-                </Avatar>
+                {profileImageUrl ? (
+                  <img src={profileImageUrl} alt={name} className="w-10 h-10 rounded-full object-cover border border-black/5 shrink-0" />
+                ) : (
+                  <Avatar className="w-10 h-10 border border-black/5 shrink-0">
+                    <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{name[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="hidden lg:block overflow-hidden">
                   <div className="font-medium text-sm text-[#0f0f10] truncate">{name}</div>
                   <div className="text-xs text-neutral-500 truncate">@{username || name.toLowerCase().replace(/\s+/g, '.')}</div>
@@ -254,6 +306,7 @@ export default function AppLayout({
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
               )}
             </Link>
+            <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
           </div>
         </header>
         <div className="flex-1">

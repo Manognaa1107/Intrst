@@ -50,8 +50,8 @@ export const apiFetch = async (endpoint: string, options: RequestOptions = {}) =
         try {
           const errorData = JSON.parse(textResponse);
           const potentialError = errorData.error || errorData.message;
-          errorMsg = typeof potentialError === 'string' 
-            ? potentialError 
+          errorMsg = typeof potentialError === 'string'
+            ? potentialError
             : (typeof potentialError === 'object' ? JSON.stringify(potentialError) : errorMsg);
         } catch {
           errorMsg = textResponse;

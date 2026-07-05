@@ -12,6 +12,7 @@ import { ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, PlusIcon, XIcon, LockIco
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/context/UserContext";
 import { PersonalityPrompt } from "@/components/PersonalityPrompt";
+import { PostCard } from "@/components/PostCard";
 
 const tabs = ["All", "Tips", "Questions", "Events", "Utilities", "Opinions"];
 
@@ -29,10 +30,6 @@ export default function HomePage() {
   const [savedPosts, setSavedPosts] = useState<string[]>([]);
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
-  const [postComments, setPostComments] = useState<Record<string, any[]>>({});
-  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const showPersonalityPrompt = !isAuthLoading && !has_completed_personality && !!user_id;
 
   const fetchPosts = async () => {
@@ -127,29 +124,6 @@ export default function HomePage() {
     }
   };
 
-  const handleLike = async (postId: string) => {
-    // Optimistic Update
-    setPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const isLiked = p.user_has_liked;
-        return {
-          ...p,
-          user_has_liked: !isLiked,
-          likes_count: (p.likes_count || 0) + (isLiked ? -1 : 1)
-        };
-      }
-      return p;
-    }));
-
-    try {
-      await apiFetch(`/posts/${postId}/like`, { method: 'POST' });
-    } catch (error) {
-      console.error("Failed to like post:", error);
-      // Rollback if failed
-      fetchPosts();
-    }
-  };
-
   const handleDeletePost = async (postId: string) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this post?"
@@ -208,56 +182,6 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error("Save failed:", error);
-    }
-  };
-
-  const toggleComments = async (postId: string) => {
-    const isExpanded = expandedComments.has(postId);
-    const newExpanded = new Set(expandedComments);
-
-    if (isExpanded) {
-      newExpanded.delete(postId);
-    } else {
-      newExpanded.add(postId);
-      // Fetch data if not already fetched
-      if (!postComments[postId]) {
-        fetchComments(postId);
-      }
-    }
-    setExpandedComments(newExpanded);
-  };
-
-  const fetchComments = async (postId: string) => {
-    try {
-      setCommentLoading(prev => ({ ...prev, [postId]: true }));
-      const data = await apiFetch(`/comments/${postId}`);
-      setPostComments(prev => ({ ...prev, [postId]: data || [] }));
-    } catch (error) {
-      console.error("Failed to fetch comments:", error);
-    } finally {
-      setCommentLoading(prev => ({ ...prev, [postId]: false }));
-    }
-  };
-
-  const handleAddComment = async (postId: string) => {
-    const text = commentInputs[postId];
-    if (!text?.trim()) return;
-
-    try {
-      const response = await apiFetch("/comments", {
-        method: "POST",
-        body: JSON.stringify({ postId, comment: text })
-      });
-
-      if (response && response.comment) {
-        setCommentInputs(prev => ({ ...prev, [postId]: "" }));
-        fetchComments(postId); // Refresh comment list
-        // Update comment count locally
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, post_comments: [{ count: (p.post_comments?.[0]?.count || 0) + 1 }] } : p));
-      }
-    } catch (error) {
-      console.error("Failed to add comment:", error);
-      alert("Failed to add comment.");
     }
   };
 
@@ -374,14 +298,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mb-8 md:block flex items-center justify-between">
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-dmserif font-semibold text-[#0f0f10]">Campus Pulse</h1>
               <p className="text-neutral-500">What&apos;s happening on campus right now.</p>
             </div>
-            {activeTab !== "All" && (
-              <Badge className="bg-[#505f78]/10 text-[#505f78] border-[#505f78]/20">Showing {activeTab}s</Badge>
-            )}
+            <div className="flex items-center gap-3">
+              {activeTab !== "All" && (
+                <Badge className="bg-[#505f78]/10 text-[#505f78] border-[#505f78]/20">Showing {activeTab}s</Badge>
+              )}
+              <Button onClick={() => setIsFabOpen(true)} className="bg-black hover:bg-[#505f78] text-white rounded-full flex items-center gap-2 px-5 font-semibold text-xs h-9">
+                <PlusIcon className="w-4 h-4" /> Create Post
+              </Button>
+            </div>
           </div>
 
           {/* Fallback prompt banner when no interests selected */}
@@ -418,144 +347,14 @@ export default function HomePage() {
               <p>No posts yet. Be the first to post something!</p>
             </div>
           ) : filteredPosts.map((post) => (
-            <Card key={post.id} className="p-5 sm:p-6 bg-white/80 backdrop-blur-sm border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white hover:border-black/10 transition-all duration-300">
-              <div className="flex gap-3 mb-3">
-                <Avatar className="w-10 h-10 border border-black/5">
-                  <AvatarFallback className="bg-neutral-100 text-neutral-600 font-semibold">
-                    {post.is_anonymous ? "A" : ((post.profiles?.name || "U")[0])}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-semibold text-[#0f0f10] text-sm">{post.is_anonymous ? "Anonymous" : (post.profiles?.name || "Student")}</h4>
-                      <p className="text-xs text-neutral-500">
-                        {post.is_anonymous ? "Hidden Identity" : (post.profiles?.department || "General")} &middot; {post.is_anonymous ? "Unknown" : (post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member")}
-                      </p>
-                    </div>
-                    {/* <Badge className={getTagColor(post.post_type)} variant="outline">
-                      {post.post_type}
-                    </Badge> */}
-                    <div className="flex items-center gap-2">
-                      <Badge className={getTagColor(post.post_type)} variant="outline">
-                        {post.post_type}
-                      </Badge>
-
-                      {post.user_id === user_id && (
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-red-500 hover:text-red-700 text-xs font-medium"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-foreground text-[15px] leading-relaxed mb-4 ml-[52px]">
-                {post.content}
-              </p>
-
-              <div className="flex items-center gap-6 ml-[52px] text-neutral-500">
-                <button
-                  onClick={() => handleLike(post.id)}
-                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${post.user_has_liked ? 'text-[#855300]' : 'hover:text-black'}`}
-                >
-                  <div className={`p-1.5 rounded-full transition-colors ${post.user_has_liked ? 'bg-[#855300]/10' : 'group-hover:bg-neutral-100'}`}>
-                    <ThumbsUpIcon className={`w-4 h-4 ${post.user_has_liked ? 'fill-[#855300] text-[#855300]' : ''}`} />
-                  </div>
-                  {post.likes_count || 0}
-                </button>
-                <button
-                  onClick={() => toggleComments(post.id)}
-                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${expandedComments.has(post.id) ? 'text-[#505f78]' : 'hover:text-black'}`}
-                >
-                  <div className={`p-1.5 rounded-full transition-colors ${expandedComments.has(post.id) ? 'bg-[#505f78]/10' : 'group-hover:bg-neutral-100'}`}>
-                    <MessageCircleIcon className="w-4 h-4" />
-                  </div>
-                  {post.post_comments?.[0]?.count || 0}
-                </button>
-                <div className="flex-1"></div>
-                <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
-                {/* <button className="p-1.5 rounded-full hover:bg-neutral-100 hover:text-black transition-colors">
-                  <BookmarkIcon className="w-4 h-4" />
-                </button> */}
-                <button
-                  onClick={() => toggleSavePost(post.id)}
-                  className={`p-1.5 rounded-full transition-colors ${savedPosts.includes(post.id)
-                    ? "text-[#855300] bg-[#855300]/10"
-                    : "hover:bg-neutral-100 hover:text-black"
-                    }`}
-                >
-                  <BookmarkIcon
-                    className={`w-4 h-4 ${savedPosts.includes(post.id)
-                      ? "fill-current"
-                      : ""
-                      }`}
-                  />
-                </button>
-              </div>
-
-              {/* Comment Section */}
-              {expandedComments.has(post.id) && (
-                <div className="mt-4 ml-[52px] space-y-4 pt-4 border-t border-black/5 animate-in slide-in-from-top-2 duration-200">
-                  <div className="flex gap-2">
-                    <Avatar className="w-8 h-8 border border-black/5">
-                      <AvatarFallback className="bg-neutral-100 text-[10px] text-neutral-600">ME</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Add a comment..."
-                        value={commentInputs[post.id] || ""}
-                        onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                        onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
-                        className="flex-1 bg-white/60 border border-black/5 rounded-full px-4 py-1.5 text-xs focus:outline-none focus:border-neutral-300 transition-colors placeholder:text-neutral-400"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddComment(post.id)}
-                        disabled={!commentInputs[post.id]?.trim()}
-                        className="bg-black text-white hover:bg-[#505f78] h-8 px-4 text-xs font-bold rounded-full"
-                      >
-                        Post
-                      </Button>
-                    </div>
-                  </div>
-
-                  {commentLoading[post.id] ? (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : postComments[post.id]?.length === 0 ? (
-                    <p className="text-xs text-neutral-500 text-center py-2">No comments yet. Start the conversation!</p>
-                  ) : (
-                    <div className="space-y-4">
-
-                      {postComments[post.id]?.map((comment) => (
-                        <div key={comment.id} className="flex gap-3">
-                          <Avatar className="w-7 h-7 border border-black/5">
-                            <AvatarFallback className="bg-neutral-100 text-[9px] text-neutral-600">
-                              {comment.profiles?.name?.[0] || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="bg-white/60 border border-black/5 rounded-[20px] p-3 px-4">
-                              <h5 className="text-[11px] font-bold text-[#0f0f10]">{comment.profiles?.name || "Anonymous"}</h5>
-                              <p className="text-sm text-neutral-800">{comment.comment}</p>
-                            </div>
-                            <span className="text-[10px] text-neutral-500 ml-2">Just now</span>
-                            <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
+            <PostCard
+              key={post.id}
+              post={post}
+              user_id={user_id}
+              onDelete={() => handleDeletePost(post.id)}
+              isSaved={savedPosts.includes(post.id)}
+              onSave={() => toggleSavePost(post.id)}
+            />
           ))}
         </div>
       </div>

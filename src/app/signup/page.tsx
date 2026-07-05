@@ -121,45 +121,14 @@ export default function SignupPage() {
         timestamp: new Date().getTime()
       }));
 
-      // 4. If session exists instantly (email confirm OFF), initialize and go to onboarding
-      if (data?.session) {
-        try {
-          await apiFetch("/auth/initialize-profile", {
-            method: "POST",
-            body: JSON.stringify({
-              user_id: data.user?.id,
-              email: formData.email,
-              name: formData.name,
-              username: formData.username,
-            }),
-          });
-        } catch (initErr) {
-          console.error("Auto-initialization failed:", initErr);
-        }
-
-        router.push("/onboarding");
-        return;
-      }
-
-      // 5. Wait then send OTP
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: formData.email,
-        options: { shouldCreateUser: false },
-      });
-
-      if (otpError) {
-        console.warn("OTP resend skipped:", otpError.message);
-      }
-
-      // 6. Always redirect to verify
+      // 4. Redirect to verify (Supabase signUp automatically sends the confirmation email/OTP code if enabled)
       router.push(
         `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
       );
     } catch (err: any) {
       console.error("Signup process failed:", err);
-      setError(err.message || "An error occurred during signup.");
+      const msg = typeof err === 'object' && err !== null ? (err.message || JSON.stringify(err)) : String(err);
+      setError(msg || "An error occurred during signup.");
     } finally {
       setLoading(false);
     }
