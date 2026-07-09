@@ -49,7 +49,9 @@ export default function SignInPage() {
         `/verify?email=${encodeURIComponent(email)}&type=email`
       );
     } catch (err: any) {
-      setError(err.message || "Failed to send OTP.");
+      console.error("OTP send failed:", err);
+      const msg = typeof err === 'object' && err !== null ? (err.message || JSON.stringify(err)) : String(err);
+      setError(msg || "Failed to send OTP.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,9 @@ export default function SignInPage() {
         return;
       }
     } catch (err: any) {
-      setError(err.message || "Login failed.");
+      console.error("Login failed:", err);
+      const msg = typeof err === 'object' && err !== null ? (err.message || JSON.stringify(err)) : String(err);
+      setError(msg || "Login failed.");
     } finally {
       setLoading(false);
     }
