@@ -267,15 +267,9 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("User session not found");
+      if (!user_id) {
+        throw new Error("User session not found in context. Please refresh and try again.");
       }
-
-      const user_id = user.id;
 
       let avatarUrl = "";
 
