@@ -17,6 +17,8 @@ import {
   XIcon,
   Search
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { getApiUrl } from "@/lib/apiClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -261,7 +263,7 @@ export default function VacantClassrooms() {
   const fetchClassrooms = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classrooms?building=${encodeURIComponent(selectedBuilding)}`);
+      const response = await fetch(`${getApiUrl()}/classrooms?building=${encodeURIComponent(selectedBuilding)}`);
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
@@ -655,7 +657,7 @@ function RoomTimetableDialog({ room }: { room: any }) {
   const fetchTimetable = async () => {
     setLoading(true);
     try {
-      const resp = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classrooms/${room.id}/timetable`);
+      const resp = await fetch(`${getApiUrl()}/classrooms/${room.id}/timetable`);
       if (resp.ok) {
         const data = await resp.json();
         setTimetable(data || []);
@@ -754,7 +756,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
     try {
       // If using Supabase: Insert into rooms table
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classrooms`, {
+      const response = await fetch(`${getApiUrl()}/classrooms`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -773,7 +775,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
 
         // Call report endpoint to save initial status
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classrooms/report`, {
+          await fetch(`${getApiUrl()}/classrooms/report`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -965,7 +967,7 @@ function ManageRoomsDialog({ currentBuilding, onSuccess }: { currentBuilding: st
     try {
       const rooms = JSON.parse(bulkJson);
       const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/classrooms/bulk`, {
+      const response = await fetch(`${getApiUrl()}/classrooms/bulk`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
