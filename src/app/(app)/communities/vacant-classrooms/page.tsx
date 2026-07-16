@@ -17,7 +17,6 @@ import {
   XIcon,
   Search
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { getApiUrl } from "@/lib/apiClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
