@@ -87,32 +87,7 @@ const PURPOSE_OPTIONS = [
   },
 ];
 
-const INTEREST_CATEGORIES = [
-  { tag: "Photography", icon: Camera },
-  { tag: "Music", icon: Music },
-  { tag: "Gaming", icon: Gamepad2 },
-  { tag: "Fitness", icon: Dumbbell },
-  { tag: "Coding", icon: Code },
-  { tag: "Design", icon: Palette },
-  { tag: "Film", icon: Film },
-  { tag: "AI / ML", icon: Brain },
-  { tag: "Startups", icon: Rocket },
-  { tag: "Art", icon: PenTool },
-  { tag: "Books", icon: BookOpenCheck },
-  { tag: "Open Mic", icon: Mic2 },
-  { tag: "Debate", icon: MessageCircle },
-  { tag: "Travel", icon: Globe },
-  { tag: "Cafe Hopping", icon: Coffee },
-  { tag: "Hiking", icon: Mountain },
-  { tag: "Poetry", icon: BookOpen },
-  { tag: "Cooking", icon: Heart },
-  { tag: "Chess", icon: Trophy },
-  { tag: "Esports", icon: Zap },
-  { tag: "Robotics", icon: FlaskConical },
-  { tag: "Dance", icon: Sparkles },
-  { tag: "Psychology", icon: Lightbulb },
-  { tag: "Finance", icon: Target },
-];
+import { INTEREST_TAGS } from "@/constants/interestTags";
 
 const DEPARTMENTS = [
   "CSE",
@@ -703,7 +678,7 @@ export default function OnboardingPage() {
 
                 {/* Interest Chips */}
                 <div className="flex flex-wrap gap-2 mb-6 max-h-[320px] overflow-y-auto pr-1 hide-scrollbar">
-                  {INTEREST_CATEGORIES.map((item, i) => {
+                  {INTEREST_TAGS.map((item, i) => {
                     const isSelected = selectedInterests.includes(item.tag);
                     const IconComp = item.icon;
                     return (
