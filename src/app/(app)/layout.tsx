@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon } from "lucide-react";
+import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon, ClipboardListIcon, CheckCircle2Icon, SettingsIcon, ScrollTextIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
@@ -66,6 +66,11 @@ export default function AppLayout({
   const pathname = usePathname();
   const { name, username, aiProfile, role, user_id, profileImageUrl } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const isAdminRoute = pathname.startsWith("/admin");
+  const displayProfileImageUrl = isAdminRoute ? null : profileImageUrl;
+  const displayName = isAdminRoute ? "Administrator" : name;
+  const displayUsername = isAdminRoute ? "admin" : username;
 
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -171,7 +176,7 @@ export default function AppLayout({
     roleRequired?: string[];
   }
 
-  const navItems: NavItem[] = [
+  const studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
@@ -184,9 +189,21 @@ export default function AppLayout({
 
   // Add Admin item if role matches
   const isAdmin = ['super_admin', 'founder', 'moderator', 'junior_moderator'].includes(role);
-  if (isAdmin) {
-    navItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
+  if (isAdmin && !isAdminRoute) {
+    studentNavItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
   }
+
+  const adminNavItems: NavItem[] = [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
+    { name: "Club Requests", href: "/admin/club-requests", icon: ClipboardListIcon },
+    { name: "Approved Clubs", href: "/admin/approved-clubs", icon: CheckCircle2Icon },
+    { name: "User Management", href: "/admin/user-management", icon: UsersIcon },
+    { name: "Reports", href: "/admin/reports", icon: ScrollTextIcon },
+    { name: "Settings", href: "/admin/settings", icon: SettingsIcon },
+    { name: "Profile", href: "/admin/profile", icon: UserIcon },
+  ];
+
+  const navItems = isAdminRoute ? adminNavItems : studentNavItems;
 
   return (
     <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
@@ -216,7 +233,7 @@ export default function AppLayout({
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
             )}
           </Link>
-          <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
+          <ProfileMenu profileImageUrl={displayProfileImageUrl} name={displayName} username={displayUsername} user_id={isAdminRoute ? undefined : user_id} />
         </div>
       </header>
 
@@ -268,16 +285,16 @@ export default function AppLayout({
               </>
             ) : (
               <>
-                {profileImageUrl ? (
-                  <img src={profileImageUrl} alt={name} className="w-10 h-10 rounded-full object-cover border border-black/5 shrink-0" />
+                {displayProfileImageUrl ? (
+                  <img src={displayProfileImageUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-black/5 shrink-0" />
                 ) : (
                   <Avatar className="w-10 h-10 border border-black/5 shrink-0">
-                    <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{name[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{displayName[0]?.toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 )}
                 <div className="hidden lg:block overflow-hidden">
-                  <div className="font-medium text-sm text-[#0f0f10] truncate">{name}</div>
-                  <div className="text-xs text-neutral-500 truncate">@{username || name.toLowerCase().replace(/\s+/g, '.')}</div>
+                  <div className="font-medium text-sm text-[#0f0f10] truncate">{displayName}</div>
+                  <div className="text-xs text-neutral-500 truncate">@{displayUsername || displayName.toLowerCase().replace(/\s+/g, '.')}</div>
                 </div>
               </>
             )}
@@ -306,7 +323,7 @@ export default function AppLayout({
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
               )}
             </Link>
-            <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
+            <ProfileMenu profileImageUrl={displayProfileImageUrl} name={displayName} username={displayUsername} user_id={isAdminRoute ? undefined : user_id} />
           </div>
         </header>
         <div className="flex-1">
