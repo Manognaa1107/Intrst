@@ -41,6 +41,7 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
     let initialRole = "user";
     let isApproved = true;
     let isVerified = true;
+    let requestData = null;
 
     if (SUPER_ADMINS.includes(email.toLowerCase())) {
       initialRole = "founder";
@@ -54,18 +55,40 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
       initialRole = "club";
       isApproved = false; // Clubs MUST be manually approved
       isVerified = false; // Stay unverified until approved/manual check
+
+      // Check if there is an approved request for this club email
+      const { data: request } = await supabase
+        .from("club_requests")
+        .select("*")
+        .eq("club_email", email.toLowerCase().trim())
+        .maybeSingle();
+
+      if (request) {
+        requestData = request;
+        if (request.status === "approved") {
+          isApproved = true;
+          isVerified = true;
+        }
+      }
     }
 
     const profilePayload = {
       user_id,
-      name,
+      name: name || requestData?.club_name,
       username: username.toLowerCase().trim(),
+      email: email.toLowerCase().trim(),
       role: initialRole,
       is_verified: isVerified,
       is_approved: isApproved,
       ai_profile: aiProfile || null,
-      phone: phone || null,
-      club_metadata: club_details || null,
+      phone: phone || requestData?.phone_number || null,
+      bio: requestData?.description || null,
+      club_metadata: initialRole === "club" ? {
+        category: requestData?.category || "General",
+        description: requestData?.description || "",
+        president_name: requestData?.president_name || "",
+        ...(club_details || {})
+      } : (club_details || null),
       points: initialRole === "founder" ? 9999 : 0,
     };
 
