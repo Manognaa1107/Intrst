@@ -32,6 +32,15 @@ export default function HomePage() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const showPersonalityPrompt = !isAuthLoading && !has_completed_personality && !!user_id;
 
+  useEffect(() => {
+    console.log("PersonalityPrompt Debug:", {
+      showPersonalityPrompt,
+      isAuthLoading,
+      has_completed_personality,
+      user_id
+    });
+  }, [showPersonalityPrompt, isAuthLoading, has_completed_personality, user_id]);
+
   const fetchPosts = async () => {
     try {
       setIsLoading(true);
