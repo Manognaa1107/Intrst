@@ -8,7 +8,11 @@ import { Mail, Eye, EyeOff, ArrowUpRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
+import { Inter } from "next/font/google";
 
+const inter = Inter({
+  subsets: ["latin"],
+});
 // Standard micro-interactions for links & buttons matching the landing page
 const buttonClickInteraction = {
   whileHover: { scale: 1.02, y: -1 },
@@ -113,24 +117,9 @@ export default function SignInPage() {
     }
   };
   return (
-    <main className="min-h-screen w-full flex items-center justify-center relative overflow-hidden stitch-font-inter p-6" style={{ backgroundColor: "#faf9f6" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        .stitch-font-inter {
-          font-family: 'Inter', sans-serif;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.25s ease-out forwards;
-        }
-        input::-ms-reveal,
-        input::-ms-clear {
-          display: none;
-        }
-      `}</style>
+    <main
+      className={`${inter.className} min-h-screen w-full flex items-center justify-center relative overflow-hidden p-6`}
+      style={{ backgroundColor: "#faf9f6" }}>
 
       {/* Background Glow Decorations (Consistent with Landing Page) */}
       <div className="absolute inset-0 pointer-events-none z-0">
