@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ICT_ROOMS } from "@/data/ictRooms";
 import {
   Building2,
   Clock,
@@ -49,20 +50,29 @@ function useToast() {
 
 // Gitam original buildings list
 const BUILDINGS = [
-  "GST - Engineering",
-  "GSB - Business",
-  "GSS - Science",
-  "Architecture",
-  "Law",
-  "Pharmacy",
-  "Humanities"
+  "ICT"
 ];
 
+const formatExpiryTime = (dateString: string) => {
+  return new Date(dateString).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
 const SEMESTERS = ["Odd 2025", "Even 2024", "Odd 2024"];
+
+const ROOM_PREFIX: Record<string, string> = {
+  "Lecture Hall": "LH",
+  "Classroom": "CR",
+  "Laboratory": "LAB",
+  "Seminar Hall": "SEM",
+};
 
 interface Classroom {
   id: string;
   room_number: string;
+  display_name?: string;
   floor: number;
   building_name: string;
   room_type?: string;
@@ -74,6 +84,7 @@ interface Classroom {
   confirmed_count: number;
   deny_count: number;
   expiry_minutes: number;
+  expires_at?: string;
   note?: string;
   reporter_name?: string;
   current_report?: {
@@ -181,11 +192,11 @@ const INITIAL_CLASSROOMS: Classroom[] = [
 ];
 
 export default function VacantClassrooms() {
-  const [selectedBuilding, setSelectedBuilding] = useState("GST - Engineering");
+  const [selectedBuilding, setSelectedBuilding] = useState("ICT");
   const [selectedSemester, setSelectedSemester] = useState("Odd 2025");
 
   // RENAME state variables to matches user instructions exactly
-  const [rooms, setRooms] = useState<Classroom[]>(INITIAL_CLASSROOMS);
+  const [rooms, setRooms] = useState<Classroom[]>([]);
   const [confirmedRooms, setConfirmedRooms] = useState<Record<string, boolean>>({});
   const [deniedRooms, setDeniedRooms] = useState<Record<string, boolean>>({});
 
@@ -197,16 +208,16 @@ export default function VacantClassrooms() {
 
   // Load classrooms from localStorage if present
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("intrst_classrooms");
-      if (cached) {
-        try {
-          setRooms(JSON.parse(cached));
-        } catch (e) {
-          console.error("Failed to parse cached classrooms:", e);
-        }
-      }
-    }
+    // if (typeof window !== "undefined") {
+    //   // const cached = localStorage.getItem("intrst_classrooms");
+    //   if (cached) {
+    //     try {
+    //       setRooms(JSON.parse(cached));
+    //     } catch (e) {
+    //       console.error("Failed to parse cached classrooms:", e);
+    //     }
+    //   }
+    // }
 
     // Get user and profile
     const fetchUser = async () => {
@@ -222,30 +233,28 @@ export default function VacantClassrooms() {
       }
     };
     fetchUser();
+    fetchClassrooms();
   }, []);
 
   // Expiry Timer: tick down expiry minutes once per minute
   useEffect(() => {
     const interval = setInterval(() => {
       setRooms(prev => {
-        const updated = prev.map(room => {
-          if (room.expiry_minutes > 0) {
-            const nextMinutes = room.expiry_minutes - 1;
-            if (nextMinutes === 0) {
-              return {
-                ...room,
-                live_status: "unknown",
-                expiry_minutes: 0,
-                current_report: null
-              };
-            }
-            return { ...room, expiry_minutes: nextMinutes };
-          }
-          return room;
+        const updated = prev.filter(room => {
+          if (!room.expires_at) return false;
+
+          const remaining =
+            Math.ceil(
+              (new Date(room.expires_at).getTime() - Date.now()) / 60000
+            );
+
+          room.expiry_minutes = Math.max(remaining, 0);
+
+          return remaining > 0;
         });
-        if (typeof window !== "undefined") {
-          localStorage.setItem("intrst_classrooms", JSON.stringify(updated));
-        }
+        // if (typeof window !== "undefined") {
+        //   localStorage.setItem("intrst_classrooms", JSON.stringify(updated));
+        // }
         return updated;
       });
     }, 60000); // 1 minute
@@ -254,9 +263,9 @@ export default function VacantClassrooms() {
 
   const saveRoomsState = (updatedList: Classroom[]) => {
     setRooms(updatedList);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("intrst_classrooms", JSON.stringify(updatedList));
-    }
+    // if (typeof window !== "undefined") {
+    //   localStorage.setItem("intrst_classrooms", JSON.stringify(updatedList));
+    // }
   };
 
   const fetchClassrooms = async () => {
@@ -270,7 +279,14 @@ export default function VacantClassrooms() {
             ...r,
             confirmed_count: r.confirmed_count || Math.floor(Math.random() * 10) + 2,
             deny_count: r.deny_count || 0,
-            expiry_minutes: r.expiry_minutes || 30,
+            expiry_minutes: r.expires_at
+              ? Math.max(
+                0,
+                Math.ceil(
+                  (new Date(r.expires_at).getTime() - Date.now()) / 60000
+                )
+              )
+              : 0,
             is_verified: r.is_verified ?? (Math.random() > 0.4),
             reporter_name: r.current_report?.reporter_name || "Student"
           }));
@@ -337,9 +353,9 @@ export default function VacantClassrooms() {
   const handleAddNewRoom = (newRoom: Classroom) => {
     setRooms(prev => {
       const updated = [newRoom, ...prev];
-      if (typeof window !== "undefined") {
-        localStorage.setItem("intrst_classrooms", JSON.stringify(updated));
-      }
+      // if (typeof window !== "undefined") {
+      //   localStorage.setItem("intrst_classrooms", JSON.stringify(updated));
+      // }
       return updated;
     });
   };
@@ -514,7 +530,10 @@ export default function VacantClassrooms() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayedClassrooms.map((room) => {
             const isStale = room.expiry_minutes === 0 || room.live_status === "unknown";
-            const expiryText = room.expiry_minutes > 0 ? `${room.expiry_minutes}m left` : "Expired";
+            const expiryText =
+              room.expiry_minutes > 0 && room.expires_at
+                ? `Expires at ${formatExpiryTime(room.expires_at)}`
+                : "Expired";
             const isVerifiedBadge = (room.is_verified || room.confirmed_count >= 5) && !isStale;
 
             return (
@@ -525,7 +544,7 @@ export default function VacantClassrooms() {
                       {/* Room number and Status Badge */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-3xl font-dmserif font-bold text-[#0f0f10] tracking-tight">
-                          {room.room_number}
+                          {room.display_name || room.room_number}
                         </h3>
                         {!isStale && room.live_status === 'empty' && (
                           <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 border border-emerald-500/20 text-[10px] uppercase font-bold tracking-wider px-2.5 py-0.5 rounded-full shadow-none shrink-0">Vacant</Badge>
@@ -584,7 +603,7 @@ export default function VacantClassrooms() {
                     <div className="flex gap-1">
                       {(userProfile?.role === 'super_admin' || userProfile?.role === 'founder' || userProfile?.role === 'moderator' || userProfile?.role === 'junior_moderator') && (
                         <Dialog>
-                          <DialogTrigger asChild>
+                          <DialogTrigger>
                             <Button variant="ghost" size="icon" className="h-8 w-8 border border-black/5 rounded-full hover:bg-neutral-100 transition-colors">
                               <Plus className="w-4 h-4 text-neutral-500" />
                             </Button>
@@ -665,6 +684,7 @@ export default function VacantClassrooms() {
 function RoomTimetableDialog({ room }: { room: any }) {
   const [timetable, setTimetable] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const fetchTimetable = async () => {
     setLoading(true);
@@ -688,15 +708,27 @@ function RoomTimetableDialog({ room }: { room: any }) {
   };
 
   return (
-    <Dialog onOpenChange={(open) => open && fetchTimetable()}>
-      <DialogTrigger>
-        <Button className="h-8 rounded-full border border-black/10 bg-white hover:bg-[#f3f1eb] text-black text-xs font-bold px-3 transition-all">
-          View Timetable
-        </Button>
-      </DialogTrigger>
+
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+
+        if (isOpen) {
+          fetchTimetable();
+        }
+      }}
+    >
+      <Button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="h-8 rounded-full border border-black/10 bg-white hover:bg-[#f3f1eb] text-black text-xs font-bold px-3 transition-all"
+      >
+        View Timetable
+      </Button>
       <DialogContent className="bg-white border border-black/5 text-[#0f0f10] max-w-lg sm:rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-dmserif text-[#0f0f10]">Room {room.room_number} Timetable</DialogTitle>
+          <DialogTitle className="text-2xl font-dmserif text-[#0f0f10]">{room.display_name || room.room_number} Timetable</DialogTitle>
           <DialogDescription className="text-neutral-500">Detailed schedule for current semester.</DialogDescription>
         </DialogHeader>
 
@@ -725,10 +757,14 @@ function RoomTimetableDialog({ room }: { room: any }) {
 }
 
 function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerText }: { building: string, onSuccess: (room: Classroom) => void, reporterName: string, isVerified: boolean, triggerText?: string }) {
-  const [roomNum, setRoomNum] = useState("");
-  const [selectedBuilding, setSelectedBuilding] = useState(building || "GST - Engineering");
+  // const [roomNum, setRoomNum] = useState("");
+  // const [selectedBuilding, setSelectedBuilding] = useState(building || "GST - Engineering");
+  // const [floorNum, setFloorNum] = useState("1");
+  // const [roomType, setRoomType] = useState("Classroom");
+  const [selectedBuilding] = useState("ICT");
   const [floorNum, setFloorNum] = useState("1");
-  const [roomType, setRoomType] = useState("Classroom");
+  const [roomType, setRoomType] = useState("Lecture Hall");
+  const [roomNum, setRoomNum] = useState("");
   const [status, setStatus] = useState<"empty" | "occupied">("empty");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [note, setNote] = useState("");
@@ -736,15 +772,32 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
+  const availableRooms =
+    ICT_ROOMS[Number(floorNum) as keyof typeof ICT_ROOMS]?.[
+    roomType as keyof (typeof ICT_ROOMS)[1]
+    ] || [];
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomNum.trim()) return;
     setLoading(true);
-
+    const displayName = `${ROOM_PREFIX[roomType]}-${roomNum.toUpperCase()}`;
+    console.log({
+      roomNum,
+      roomType,
+      displayName
+    });
     const generatedId = Date.now().toString();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+    expiresAt.setMinutes(0);
+    expiresAt.setSeconds(0);
+    expiresAt.setMilliseconds(0);
+
     const newRoomObj: Classroom = {
       id: generatedId,
       room_number: roomNum.toUpperCase(),
+      display_name: displayName,
       floor: parseInt(floorNum) || 1,
       building_name: selectedBuilding,
       room_type: roomType,
@@ -754,7 +807,8 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
       is_verified: isAnonymous ? false : isVerified,
       confirmed_count: 1, // Start with 1 confirmation from reporter
       deny_count: 0,
-      expiry_minutes: 60, // Auto-expire after 60 minutes
+      expiry_minutes: Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60)),
+      expires_at: expiresAt.toISOString(),
       note: note || undefined,
       reporter_name: isAnonymous ? "Anonymous" : reporterName,
       current_report: {
@@ -764,6 +818,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
         is_verified: isAnonymous ? false : isVerified
       }
     };
+
 
     try {
       // If using Supabase: Insert into rooms table
@@ -777,7 +832,9 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
         body: JSON.stringify({
           building_name: selectedBuilding,
           room_number: roomNum.toUpperCase(),
-          floor: parseInt(floorNum) || 1
+          floor: parseInt(floorNum) || 1,
+          room_type: roomType,
+          display_name: displayName
         })
       });
 
@@ -813,7 +870,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
     setRoomNum("");
     setNote("");
     setFloorNum("1");
-    setRoomType("Classroom");
+    setRoomType("Lecture Hall");
     setIsAnonymous(false);
     setOpen(false);
     setLoading(false);
@@ -822,19 +879,32 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button variant="outline" className="bg-white border border-black/5 text-[#0f0f10] font-semibold hover:bg-neutral-100 rounded-xl shadow-sm">
-          {triggerText ? (
-            triggerText
-          ) : (
-            <>
-              <Plus className="w-4 h-4 mr-2 text-[#855300]" />
-              Add Room
-            </>
-          )}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="bg-white border border-black/5 text-[#0f0f10] sm:rounded-2xl max-w-md">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          console.log("ADD ROOM CLICKED");
+          setOpen(true);
+        }}
+        className="bg-white border border-black/5 text-[#0f0f10] font-semibold hover:bg-neutral-100 rounded-xl shadow-sm"
+      >
+        {triggerText ? (
+          triggerText
+        ) : (
+          <>
+            <Plus className="w-4 h-4 mr-2 text-[#855300]" />
+            Add Room
+          </>
+        )}
+      </Button>
+      <DialogContent
+        className="bg-white border border-black/5 text-[#0f0f10] sm:rounded-2xl max-w-md
+        [&>button]:rounded-full
+        [&>button]:transition-all
+        [&>button]:duration-200
+        [&>button]:hover:bg-[#f5f5f4]
+        [&>button]:hover:text-black"
+      >
         <DialogHeader>
           <DialogTitle className="font-dmserif">Report Classroom Status</DialogTitle>
           <DialogDescription>Report vacancy status of Gitam campus classrooms.</DialogDescription>
@@ -843,55 +913,79 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
         <form onSubmit={handleAddSubmit} className="space-y-4 py-2 text-left">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">Room Number</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Building
+              </label>
+
               <Input
-                required
-                value={roomNum}
-                onChange={(e) => setRoomNum(e.target.value)}
-                placeholder="e.g. LH-302, LT-2"
-                className="bg-[#faf9f6] border border-black/5 rounded-xl text-[#0f0f10] placeholder-neutral-400"
+                value="ICT"
+                readOnly
+                className="bg-[#faf9f6] border border-black/5 rounded-xl"
               />
             </div>
+
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">Floor</label>
-              <Input
-                required
-                type="number"
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Floor
+              </label>
+
+              <select
                 value={floorNum}
-                onChange={(e) => setFloorNum(e.target.value)}
-                placeholder="e.g. 1"
-                min="0"
-                className="bg-[#faf9f6] border border-black/5 rounded-xl text-[#0f0f10] placeholder-neutral-400"
-              />
+                onChange={(e) => {
+                  setFloorNum(e.target.value);
+                  setRoomNum("");
+                }}
+                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3"
+              >
+                {[1, 2, 3, 4, 5, 6].map(f => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 block">Building</label>
-              <select
-                value={selectedBuilding}
-                onChange={(e) => setSelectedBuilding(e.target.value)}
-                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-sm text-[#0f0f10] outline-none"
-              >
-                {BUILDINGS.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 block">Room Type</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Room Type
+              </label>
+
               <select
                 value={roomType}
-                onChange={(e) => setRoomType(e.target.value)}
-                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-sm text-[#0f0f10] outline-none"
+                onChange={(e) => {
+                  setRoomType(e.target.value);
+                  setRoomNum("");
+                }}
+                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3"
               >
-                <option value="Classroom">Classroom</option>
                 <option value="Lecture Hall">Lecture Hall</option>
                 <option value="Laboratory">Laboratory</option>
                 <option value="Seminar Hall">Seminar Hall</option>
               </select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                Room Number
+              </label>
+
+              <select
+                value={roomNum}
+                onChange={(e) => setRoomNum(e.target.value)}
+                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3"
+              >
+                <option value="">Select Room</option>
+
+                {availableRooms.map((room) => (
+                  <option key={room} value={room}>
+                    {room}
+                  </option>
+                ))}
+              </select>
+            </div>
+
           </div>
 
           <div className="space-y-2">
@@ -907,7 +1001,10 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
               <Button
                 type="button"
                 onClick={() => setStatus("occupied")}
-                className={`flex-1 rounded-xl h-10 font-bold ${status === "occupied" ? "bg-black text-white" : "bg-white text-black border border-black/5"}`}
+                className={`flex-1 rounded-xl h-10 font-bold transition-all duration-200 ${status === "occupied"
+                  ? "bg-black text-white"
+                  : "bg-white text-black border border-black/10 hover:bg-[#fdf2f2] hover:border-rose-200 hover:text-rose-700"
+                  }`}
               >
                 Occupied
               </Button>
@@ -937,7 +1034,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
             />
           </div>
 
-          <DialogFooter className="flex gap-2 pt-2 sm:space-x-0">
+          <div className="flex gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
@@ -945,11 +1042,11 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
                 setRoomNum("");
                 setNote("");
                 setFloorNum("1");
-                setRoomType("Classroom");
+                setRoomType("Lecture Hall");
                 setIsAnonymous(false);
                 setOpen(false);
               }}
-              className="flex-1 border border-black/5 rounded-xl font-semibold h-11"
+              className="flex-1 h-11 rounded-xl border border-black/10 bg-white text-black hover:bg-[#f5f5f4] hover:border-black/20 hover:text-black transition-all duration-200"
             >
               Cancel
             </Button>
@@ -960,7 +1057,7 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
             >
               {loading ? "Submitting..." : "Submit Report"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
@@ -1003,12 +1100,14 @@ function ManageRoomsDialog({ currentBuilding, onSuccess }: { currentBuilding: st
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
-        <Button className="bg-black hover:bg-[#505f78] text-white rounded-xl font-semibold shadow-sm">
-          <Plus className="w-4 h-4 mr-2 text-white" />
-          Manage Rooms
-        </Button>
-      </DialogTrigger>
+      <Button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="bg-black hover:bg-[#505f78] text-white rounded-xl font-semibold shadow-sm"
+      >
+        <Plus className="w-4 h-4 mr-2 text-white" />
+        Manage Rooms
+      </Button>
       <DialogContent className="bg-white border border-black/5 text-[#0f0f10] max-w-2xl sm:rounded-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-dmserif text-[#0f0f10]">Admin Classroom Panel</DialogTitle>
@@ -1058,7 +1157,7 @@ function ReportIssueDialog({ room }: { room: Classroom }) {
     e.preventDefault();
     setSubmitting(true);
     setTimeout(() => {
-      toast({ title: "Issue Reported", description: `Issue with ${room.room_number} submitted successfully.` });
+      toast({ title: "Issue Reported", description: `Issue with ${room.display_name || room.room_number} submitted successfully.` });
       setSubmitting(false);
       setOpen(false);
       setDescription("");
@@ -1067,15 +1166,17 @@ function ReportIssueDialog({ room }: { room: Classroom }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <span className="flex items-center gap-1 font-semibold text-[#505f78] hover:text-black cursor-pointer transition-colors group/link">
-          Report Issue <ChevronRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
-        </span>
-      </DialogTrigger>
+      <span
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1 font-semibold text-[#505f78] hover:text-black cursor-pointer transition-colors group/link"
+      >
+        Report Issue
+        <ChevronRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform" />
+      </span>
       <DialogContent className="bg-white border border-black/5 text-[#0f0f10] sm:rounded-2xl max-w-md">
         <DialogHeader>
           <DialogTitle className="font-dmserif">Report Classroom Issue</DialogTitle>
-          <DialogDescription>Let us know if there is an issue with {room.room_number}.</DialogDescription>
+          <DialogDescription>Let us know if there is an issue with {room.display_name || room.room_number}.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-2 text-left">
           <div className="space-y-2">
