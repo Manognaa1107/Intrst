@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon, ClipboardListIcon, CheckCircle2Icon, SettingsIcon, ScrollTextIcon } from "lucide-react";
+import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon, ClipboardListIcon, CheckCircle2Icon, SettingsIcon, ScrollTextIcon, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
@@ -195,23 +195,27 @@ export default function AppLayout({
 
   const adminNavItems: NavItem[] = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
-    { name: "Club Requests", href: "/admin/club-requests", icon: ClipboardListIcon },
-    { name: "Approved Clubs", href: "/admin/approved-clubs", icon: CheckCircle2Icon },
+    { name: "Clubs", href: "/admin/clubs", icon: ClipboardListIcon },
+    { name: "Events", href: "/admin/events", icon: CalendarIcon },
+    { name: "Classrooms", href: "/admin/classrooms", icon: Building2 },
     { name: "User Management", href: "/admin/user-management", icon: UsersIcon },
     { name: "Reports", href: "/admin/reports", icon: ScrollTextIcon },
     { name: "Settings", href: "/admin/settings", icon: SettingsIcon },
     { name: "Profile", href: "/admin/profile", icon: UserIcon },
   ];
-
   const navItems = isAdminRoute ? adminNavItems : studentNavItems;
+
+  if (isAdminRoute) {
+    return <ApprovalGuard>{children}</ApprovalGuard>;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
       {/* Background blobs (soft beige) */}
-      <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-      <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-      <div className="absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-40" />
-      <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
+      <div className="pointer-events-none absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
+      <div className="pointer-events-none absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
+      <div className="pointer-events-none absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-40" />
+      <div className="pointer-events-none absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
       {/* Top Bar for Mobile */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/40 backdrop-blur-xl border-b border-black/5 z-40 flex items-center justify-between px-4 md:hidden">
         <Link href="/home" className="flex items-center gap-2">

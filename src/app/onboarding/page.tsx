@@ -149,7 +149,7 @@ export default function OnboardingPage() {
   // Step 4: Profile
   const [department, setDepartment] = useState("");
   const [year, setYear] = useState("");
-  useState(name || ""); // Pre-fills with their name if available
+  // useState(name || ""); // Pre-fills with their name if available
   const [displayName, setDisplayName] = useState(name || "");
   const [username, setUsername] = useState(contextUsername || "");
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -158,6 +158,7 @@ export default function OnboardingPage() {
   // General
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [fromSignup, setFromSignup] = useState(false);
 
   const isProfileValid = Boolean(
     displayName.trim() &&
@@ -192,14 +193,13 @@ export default function OnboardingPage() {
     const pendingProfile = sessionStorage.getItem("intrst_pending_profile");
 
     if (pendingProfile) {
-      const data = JSON.parse(pendingProfile);
-
-      if (data.name) {
-        setDisplayName(data.name);
-      }
-
-      if (data.username) {
-        setUsername(data.username);
+      try {
+        const data = JSON.parse(pendingProfile);
+        if (data.name) setDisplayName(data.name);
+        if (data.username) setUsername(data.username);
+        setFromSignup(true); // lock fields since data came from signup
+      } catch (e) {
+        // ignore parse errors
       }
     }
   }, []);
@@ -271,7 +271,7 @@ export default function OnboardingPage() {
       let parsedYear = parseInt(year);
       if (isNaN(parsedYear)) parsedYear = 6;
 
-      const bio = "";
+      // const bio = "";
 
       const payload: Record<string, unknown> = {
         username: username || undefined,
@@ -782,13 +782,22 @@ export default function OnboardingPage() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">
                       Display Name
+                      {fromSignup && (
+                        <span className="ml-2 text-[#505f78] normal-case tracking-normal font-normal text-[9px]">
+                          · set during signup
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      value={typeof displayName !== 'undefined' ? displayName : ''}
-                      onChange={(e) => typeof setDisplayName === 'function' && setDisplayName(e.target.value)}
+                      value={displayName}
+                      onChange={(e) => !fromSignup && setDisplayName(e.target.value)}
+                      readOnly={fromSignup}
                       placeholder="e.g. Priya S."
-                      className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 font-medium bg-white"
+                      className={`w-full h-11 border rounded-xl px-3.5 text-xs outline-none transition-all font-medium ${fromSignup
+                        ? "bg-neutral-50 border-neutral-200 text-neutral-500 cursor-not-allowed"
+                        : "bg-white border-[#c5c6cd] focus:border-black focus:ring-1 focus:ring-black text-neutral-900"
+                        }`}
                     />
                   </div>
 
@@ -796,17 +805,28 @@ export default function OnboardingPage() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">
                       Username
+                      {fromSignup && (
+                        <span className="ml-2 text-[#505f78] normal-case tracking-normal font-normal text-[9px]">
+                          · set during signup
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      value={typeof username !== 'undefined' ? username : ''}
-                      onChange={(e) => typeof setUsername === 'function' && setUsername(e.target.value)}
+                      value={username}
+                      onChange={(e) => !fromSignup && setUsername(e.target.value)}
+                      readOnly={fromSignup}
                       placeholder="@ unique_username"
-                      className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 font-medium bg-white"
+                      className={`w-full h-11 border rounded-xl px-3.5 text-xs outline-none transition-all font-medium ${fromSignup
+                        ? "bg-neutral-50 border-neutral-200 text-neutral-500 cursor-not-allowed"
+                        : "bg-white border-[#c5c6cd] focus:border-black focus:ring-1 focus:ring-black text-neutral-900"
+                        }`}
                     />
-                    <p className="text-[10px] text-neutral-400 mt-1.5 pl-1">
-                      Letters, numbers, and underscores only.
-                    </p>
+                    {!fromSignup && (
+                      <p className="text-[10px] text-neutral-400 mt-1.5 pl-1">
+                        Letters, numbers, and underscores only.
+                      </p>
+                    )}
                   </div>
 
                   {/* Department Dropdown */}
