@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star } from "lucide-react";
 import Link from "next/link";
-// import { apiFetch } from "@/lib/apiClient"; // Removed for Phase 5A mock
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -23,6 +23,7 @@ const buttonClickInteraction = {
 
 export default function RedesignedClubRequestPage() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
@@ -59,8 +60,10 @@ export default function RedesignedClubRequestPage() {
     setLoading(true);
     setError(null);
 
+    const normalizedEmail = formData.club_email.toLowerCase().trim();
+
     // Basic Validation
-    if (!formData.club_name || !formData.club_email || !formData.president_name) {
+    if (!formData.club_name || !normalizedEmail || !formData.president_name) {
       setError("Club name, email, and president name are required.");
       setLoading(false);
       return;
@@ -73,9 +76,56 @@ export default function RedesignedClubRequestPage() {
     }
 
     try {
-      // Phase 5A: Simulate network request instead of calling Supabase
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // await apiFetch("/auth/club-request", { ... });
+      // Check for existing request with this email
+      const { data: existing, error: checkError } = await supabase
+        .from("club_requests")
+        .select("id, status")
+        .eq("club_email", normalizedEmail)
+        .maybeSingle();
+
+      if (checkError) throw new Error(checkError.message);
+
+      if (existing) {
+        if (existing.status === "pending") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        if (existing.status === "approved") {
+          setError("This club email has already been approved. Please contact the admin if you need assistance.");
+          setLoading(false);
+          return;
+        }
+        // status === 'rejected': delete old record to allow resubmission
+        const { error: deleteError } = await supabase
+          .from("club_requests")
+          .delete()
+          .eq("id", existing.id);
+        if (deleteError) throw new Error(deleteError.message);
+      }
+
+      // Insert into public.club_requests
+      const { error: insertError } = await supabase
+        .from("club_requests")
+        .insert({
+          club_name: formData.club_name.trim(),
+          club_email: normalizedEmail,
+          president_name: formData.president_name.trim(),
+          category: selectedDomains.join(", "),
+          description: formData.description.trim(),
+          status: "pending",
+        });
+
+      if (insertError) {
+        // Unique constraint violation (race condition)
+        if (insertError.code === "23505") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        throw new Error(insertError.message);
+      }
+
       router.push('/auth/club-request/submitted');
     } catch (err: any) {
       setError(err.message || "An error occurred while submitting your request.");
