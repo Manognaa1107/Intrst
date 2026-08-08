@@ -41,6 +41,14 @@ export default function HomePage() {
     });
   }, [showPersonalityPrompt, isAuthLoading, has_completed_personality, user_id]);
 
+  const router = import("next/navigation").then(m => m.useRouter);
+
+  useEffect(() => {
+    if (!isAuthLoading && role === "club") {
+      window.location.href = "/club-dashboard";
+    }
+  }, [isAuthLoading, role]);
+
   const fetchPosts = async () => {
     try {
       setIsLoading(true);

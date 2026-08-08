@@ -1,8 +1,14 @@
+console.log("AUTH ROUTES FILE LOADED");
 import express from "express";
 import supabase from "../config/supabase.js";
-import { verifyAuth,verifyAuthLight } from "../utils/auth.js";
+import { verifyAuth, verifyAuthLight } from "../utils/auth.js";
+import { sendOTPEmail } from "../utils/email.js";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
+
+// Memory stores for Rate Limiting
+const rateLimits = new Map();
 
 // Admin/Founder emails from Environment Variables (comma-separated strings)
 const getEnvList = (key) => (process.env[key] ? process.env[key].split(',').map(e => e.trim().toLowerCase()) : []);
@@ -31,7 +37,7 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
   if (!user_id || !email || !username) {
     return res.status(400).json({ error: "Missing required profile data" });
   }
-  
+
   if (req.user.id !== user_id) {
     return res.status(403).json({ error: "Forbidden: user_id mismatch" });
   }
@@ -63,12 +69,12 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
         .eq("club_email", email.toLowerCase().trim())
         .maybeSingle();
 
-      if (request) {
+      if (request && request.status === "approved") {
         requestData = request;
-        if (request.status === "approved") {
-          isApproved = true;
-          isVerified = true;
-        }
+        isApproved = true;
+        isVerified = true;
+      } else {
+        return res.status(403).json({ error: "Forbidden: Club request is not approved." });
       }
     }
 
@@ -231,6 +237,138 @@ router.post("/club-request", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// SEND OTP FOR CLUB STATUS CHECK
+router.post("/club-status/send-otp", async (req, res) => {
+  console.log("ROUTE HIT");
+  console.log(req.body);
+  console.log("--- CLUB OTP FLOW STARTED ---");
+  console.log("Request received for /club-status/send-otp");
+
+  const { email } = req.body;
+  if (!email) {
+    console.log("Validation Failed: Email is missing in request body");
+    return res.status(400).json({ error: "Email is required." });
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  console.log("Target Club Email:", normalizedEmail);
+
+  // Simple Rate Limiting (max 3 per 5 mins)
+  const now = Date.now();
+  const rl = rateLimits.get(normalizedEmail) || { count: 0, resetAt: now + 5 * 60 * 1000 };
+  if (now > rl.resetAt) {
+    rl.count = 0;
+    rl.resetAt = now + 5 * 60 * 1000;
+  }
+  if (rl.count >= 3) {
+    return res.status(429).json({ error: "Too many requests. Please try again later." });
+  }
+  rl.count += 1;
+  rateLimits.set(normalizedEmail, rl);
+
+  try {
+    // DO NOT expose if the email actually exists
+    // The prompt: "For both existing and non-existing emails, use a generic response... Do not expose club existence/status until email ownership has been successfully verified."
+    const { data: request, error } = await supabase
+      .from("club_requests")
+      .select("id")
+      .eq("club_email", normalizedEmail)
+      .maybeSingle();
+
+    if (request) {
+      console.log(`[Club Status] Calling Supabase signInWithOtp for: ${normalizedEmail}`);
+      
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: normalizedEmail
+      });
+
+      if (otpError) {
+        console.error("[Club Status] Supabase OTP send error:", {
+          message: otpError.message,
+          status: otpError.status,
+          code: otpError.code
+        });
+        return res.status(500).json({ error: "Failed to send OTP. Please try again." });
+      }
+
+      console.log("[Club Status] Supabase OTP request succeeded");
+    } else {
+      console.log("[Club Status] No club request found in DB. Not calling Supabase Auth.");
+    }
+
+    console.log("--- CLUB OTP FLOW FINISHED ---");
+
+    // Always return the same generic message to preserve privacy
+    res.status(200).json({ message: "If a club request exists for this email, a verification code has been sent." });
+  } catch (err) {
+    console.error("Failed to send club status OTP:", err);
+    res.status(500).json({ error: "An internal error occurred." });
+  }
+});
+
+// VERIFY OTP AND GET CLUB STATUS
+router.post("/club-status/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required." });
+
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    console.log(`[Club Status] OTP verification requested for: ${normalizedEmail}`);
+    // 1. Verify OTP using Supabase Auth
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      email: normalizedEmail,
+      token: otp.toString().trim(),
+      type: 'email'
+    });
+
+    if (verifyError) {
+      console.error("[Club Status] Supabase OTP verification failed:", {
+        message: verifyError.message,
+        status: verifyError.status,
+        code: verifyError.code
+      });
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    console.log("[Club Status] Supabase OTP verification succeeded");
+
+    console.log("[Club Status] Fetching club request status for verified email");
+    const { data: request, error } = await supabase
+      .from("club_requests")
+      .select("*")
+      .eq("club_email", normalizedEmail)
+      .maybeSingle();
+
+    if (error || !request) {
+      return res.status(404).json({ error: "Club request not found." });
+    }
+    
+    console.log(`[Club Status] Request status: ${request.status}`);
+
+    let setupToken = null;
+    if (request.status === "approved") {
+      const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_for_dev";
+      setupToken = jwt.sign(
+        { email: normalizedEmail, requestId: request.id, purpose: "club-setup" },
+        JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+    }
+
+    res.status(200).json({
+      status: request.status,
+      club_name: request.club_name,
+      created_at: request.created_at,
+      token: setupToken,
+      session: verifyData?.session || null
+    });
+  } catch (err) {
+    console.error("Failed to verify club status OTP:", err);
+    res.status(500).json({ error: "An internal error occurred." });
   }
 });
 
