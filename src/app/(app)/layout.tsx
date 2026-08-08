@@ -179,8 +179,10 @@ export default function AppLayout({
   let studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
+    { name: "Connect", href: "/connect", icon: MessageSquareIcon, special: true },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
+<<<<<<< HEAD
   ];
 
   if (role === "club") {
@@ -190,12 +192,21 @@ export default function AppLayout({
       { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     ];
   }
+=======
+  ].filter(item => {
+    // Clubs can't see Communities/Connect
+    if (role === 'club' && (item.name === 'Communities' || item.name === 'Connect')) return false;
+    return true;
+  });
+>>>>>>> origin/main
 
   // Add Admin item if role matches
   const isAdmin = ['super_admin', 'founder', 'moderator', 'junior_moderator'].includes(role);
   if (isAdmin && !isAdminRoute) {
     studentNavItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
   }
+
+  const navItems = studentNavItems;
 
   const adminNavItems: NavItem[] = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },

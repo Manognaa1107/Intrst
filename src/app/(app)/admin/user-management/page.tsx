@@ -28,6 +28,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { AdminCard, AdminCardContent } from "@/components/admin/AdminCard";
+import { AdminButton } from "@/components/admin/AdminButton";
+import { AdminBadge } from "@/components/admin/AdminBadge";
+import { AdminEmptyState } from "@/components/admin/AdminEmptyState";
+import { AdminPageLoader } from "@/components/admin/AdminSkeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +49,7 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/apiClient";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -84,6 +91,24 @@ export default function UserManagementPage() {
   const [verifyFilter, setVerifyFilter] = useState("all"); // all, verified, unverified
   const [deptFilter, setDeptFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState("all");
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "all") {
+      setVerifyFilter("all");
+      setStatusFilter("all");
+    } else if (value === "verified") {
+      setVerifyFilter("verified");
+      setStatusFilter("active");
+    } else if (value === "unverified") {
+      setVerifyFilter("unverified");
+      setStatusFilter("active");
+    } else if (value === "suspended") {
+      setVerifyFilter("all");
+      setStatusFilter("suspended");
+    }
+  };
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,6 +151,27 @@ export default function UserManagementPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const verified = params.get("verified");
+      const filter = params.get("filter");
+      const tab = params.get("tab");
+      if (verified === "true" || filter === "verified" || tab === "verified") {
+        handleTabChange("verified");
+      } else if (tab === "suspended") {
+        handleTabChange("suspended");
+      } else if (tab && ["all", "verified", "unverified", "suspended"].includes(tab)) {
+        handleTabChange(tab);
+      }
+      const q = params.get("search");
+      if (q) {
+        setSearchQuery(q);
+      }
+    }
+  }, []);
+
 
   // Action Handlers
   const handleVerifyToggle = async (user: any) => {
@@ -301,129 +347,185 @@ export default function UserManagementPage() {
   };
 
   return (
-    <main className="min-h-screen p-4 md:p-8 bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
-      {/* Background blobs for premium glassmorphism */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
-        <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+    <div className="space-y-6">
+      <AdminPageHeader
+        title="User Management"
+        description="Manage accounts, verify profiles, adjust permission levels, or issue restrictions."
+        action={
+          <AdminButton
+            variant="secondary"
+            size="sm"
+            onClick={() => fetchUsers(true)}
+            isLoading={refreshing}
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+          >
+            Refresh Users
+          </AdminButton>
+        }
+      />
+
+      {/* Summary statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <AdminCard>
+          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
+            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
+              {users.length}
+            </div>
+            <div className="text-xs font-semibold text-neutral-500">Total Accounts</div>
+          </AdminCardContent>
+        </AdminCard>
+
+        <AdminCard>
+          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
+            <div className="text-2xl font-bold font-mono text-[#0f0f10] text-emerald-700">
+              {users.filter(u => u.is_verified).length}
+            </div>
+            <div className="text-xs font-semibold text-neutral-500">Verified Students</div>
+          </AdminCardContent>
+        </AdminCard>
+
+        <AdminCard>
+          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
+            <div className="text-2xl font-bold font-mono text-[#0f0f10] text-amber-700">
+              {users.filter(u => !u.is_verified).length}
+            </div>
+            <div className="text-xs font-semibold text-neutral-500">Unverified Accounts</div>
+          </AdminCardContent>
+        </AdminCard>
+
+        <AdminCard>
+          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
+            <div className="text-2xl font-bold font-mono text-[#0f0f10] text-red-700">
+              {users.filter(u => u.is_suspended).length}
+            </div>
+            <div className="text-xs font-semibold text-neutral-500">Restricted / Suspended</div>
+          </AdminCardContent>
+        </AdminCard>
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-dmserif font-bold tracking-tight text-[#0f0f10] flex items-center gap-2">
-              <Shield className="w-8 h-8 text-[#505f78]" />
-              User Management
-            </h1>
-            <p className="text-neutral-500 font-medium">
-              Manage accounts, verify profiles, adjust permission levels, or issue restrictions.
-            </p>
-          </div>
-          <Button
-            onClick={() => fetchUsers(true)}
-            disabled={refreshing}
-            variant="outline"
-            className="self-start md:self-auto h-10 px-4 rounded-xl border border-black/10 bg-white text-neutral-700 hover:bg-[#f3f1eb] hover:text-black transition-all flex items-center gap-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Refreshing..." : "Refresh Users"}
-          </Button>
-        </header>
-
-        {/* Search & Filters Panel */}
-        <Card className="bg-white/80 backdrop-blur-md border border-black/5 rounded-[2rem] shadow-sm">
-          <CardContent className="p-6 md:p-8 space-y-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search Bar */}
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <Input
-                  type="text"
-                  placeholder="Search by name, username, or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 pl-11 pr-4 text-sm text-[#0f0f10] placeholder:text-neutral-400 focus-visible:ring-1 focus-visible:ring-black/20 focus-visible:border-neutral-300"
-                />
-              </div>
-
-              {/* Basic filters */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:w-auto">
-                {/* Role Filter */}
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="all">All Roles</option>
-                  {ROLES.map(r => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-
-                {/* Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-
-                {/* Verification Filter */}
-                <select
-                  value={verifyFilter}
-                  onChange={(e) => setVerifyFilter(e.target.value)}
-                  className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="all">All Verifications</option>
-                  <option value="verified">Verified Student</option>
-                  <option value="unverified">Unverified</option>
-                </select>
-
-                {/* Department Filter */}
-                <select
-                  value={deptFilter}
-                  onChange={(e) => setDeptFilter(e.target.value)}
-                  className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="all">All Departments</option>
-                  {DEPARTMENTS.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
+      {/* Search & Filters Panel */}
+      <Card className="bg-white/80 backdrop-blur-md border border-black/5 rounded-[2rem] shadow-sm">
+        <CardContent className="p-6 md:p-8 space-y-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Bar */}
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Input
+                type="text"
+                placeholder="Search by name, username, or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-[#faf9f6] border border-black/5 rounded-xl h-11 pl-11 pr-4 text-sm text-[#0f0f10] placeholder:text-neutral-400 focus-visible:ring-1 focus-visible:ring-black/20 focus-visible:border-neutral-300"
+              />
             </div>
 
-            {/* Extra filter criteria (Year of Study) */}
-            <div className="flex items-center gap-3 border-t border-black/5 pt-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Year of Study:</span>
-              <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
-                <Badge
-                  onClick={() => setYearFilter("all")}
-                  className={`cursor-pointer px-3.5 py-1 rounded-full text-xs transition-all font-bold ${yearFilter === "all" ? 'bg-black text-white' : 'bg-[#faf9f6] text-neutral-500 border border-black/5 hover:bg-neutral-100'}`}
-                >
-                  All Years
-                </Badge>
-                {YEARS.map(y => (
-                  <Badge
-                    key={y.value}
-                    onClick={() => setYearFilter(y.value)}
-                    className={`cursor-pointer px-3.5 py-1 rounded-full text-xs transition-all font-bold ${yearFilter === y.value ? 'bg-black text-white' : 'bg-[#faf9f6] text-neutral-500 border border-black/5 hover:bg-neutral-100'}`}
-                  >
-                    {y.label}
-                  </Badge>
+            {/* Basic filters */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:w-auto">
+              {/* Role Filter */}
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
+              >
+                <option value="all">All Roles</option>
+                {ROLES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </select>
 
-        {/* Users Table */}
-        <Card className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
-          <CardContent className="p-0">
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+
+              {/* Verification Filter */}
+              <select
+                value={verifyFilter}
+                onChange={(e) => setVerifyFilter(e.target.value)}
+                className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
+              >
+                <option value="all">All Verifications</option>
+                <option value="verified">Verified Student</option>
+                <option value="unverified">Unverified</option>
+              </select>
+
+              {/* Department Filter */}
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="bg-[#faf9f6] border border-black/5 rounded-xl h-11 px-3 text-xs text-[#0f0f10] outline-none font-semibold cursor-pointer"
+              >
+                <option value="all">All Departments</option>
+                {DEPARTMENTS.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Extra filter criteria (Year of Study) */}
+          <div className="flex items-center gap-3 border-t border-black/5 pt-4">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Year of Study:</span>
+            <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar">
+              <Badge
+                onClick={() => setYearFilter("all")}
+                className={`cursor-pointer px-3.5 py-1 rounded-full text-xs transition-all font-bold ${yearFilter === "all" ? 'bg-black text-white' : 'bg-[#faf9f6] text-neutral-500 border border-black/5 hover:bg-neutral-100'}`}
+              >
+                All Years
+              </Badge>
+              {YEARS.map(y => (
+                <Badge
+                  key={y.value}
+                  onClick={() => setYearFilter(y.value)}
+                  className={`cursor-pointer px-3.5 py-1 rounded-full text-xs transition-all font-bold ${yearFilter === y.value ? 'bg-black text-white' : 'bg-[#faf9f6] text-neutral-500 border border-black/5 hover:bg-neutral-100'}`}
+                >
+                  {y.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs defaultValue="all" value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="bg-[#f0ede6] border border-black/5 p-1 rounded-xl w-full sm:w-auto flex overflow-x-auto gap-1">
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            All Students
+          </TabsTrigger>
+          <TabsTrigger
+            value="verified"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            Verified
+          </TabsTrigger>
+          <TabsTrigger
+            value="unverified"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            Unverified
+          </TabsTrigger>
+          <TabsTrigger
+            value="suspended"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            Restricted / Suspended
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* Users Table */}
+      <Card className="bg-white border border-black/5 rounded-[2.5rem] overflow-hidden shadow-sm">
+        <CardContent className="p-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center p-20 text-neutral-500 gap-4">
                 <Loader2 className="w-10 h-10 text-black animate-spin" />
@@ -621,7 +723,6 @@ export default function UserManagementPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
       {/* MODAL: View Profile details */}
       <Dialog open={viewProfileModalOpen} onOpenChange={setViewProfileModalOpen}>
@@ -852,6 +953,6 @@ export default function UserManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

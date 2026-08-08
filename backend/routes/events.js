@@ -209,6 +209,16 @@ router.put("/:id", verifyAuth, async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message });
   }
+
+  if (isAdmin && (is_approved !== undefined || status !== undefined)) {
+    const actionType = is_approved ? "APPROVE_EVENT" : "REJECT_EVENT";
+    await logAuditAction(userId, actionType, req.params.id, {
+      event_title: title || (data && data[0]?.title) || "Event",
+      is_approved,
+      status
+    });
+  }
+
   res.json(data);
 });
 

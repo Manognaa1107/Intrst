@@ -50,6 +50,7 @@ export default function AdminClubsPage() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
 
   // Modals
@@ -133,7 +134,10 @@ export default function AdminClubsPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["pending", "active", "rejected", "suspended"].includes(tab)) {
+      if (tab === "suspended") {
+        setActiveTab("active");
+        setStatusFilter("suspended");
+      } else if (tab && ["pending", "active", "rejected"].includes(tab)) {
         setActiveTab(tab);
       }
       const q = params.get("search");
@@ -244,14 +248,14 @@ export default function AdminClubsPage() {
     return Array.from(cats);
   };
 
-  const filterList = (list: any[], type: "pending" | "active" | "rejected" | "suspended") => {
+  const filterList = (list: any[], type: "pending" | "active" | "rejected") => {
     return list.filter((item: any) => {
       let name = "";
       let category = "";
       let president = "";
       let createdAt = "";
 
-      if (type === "active" || type === "suspended") {
+      if (type === "active") {
         name = item.name || "";
         category = item.club_metadata?.category || "";
         president = item.club_metadata?.president_name || item.username || "";
@@ -270,6 +274,12 @@ export default function AdminClubsPage() {
 
       const matchCategory = categoryFilter === "all" || category.toLowerCase() === categoryFilter.toLowerCase();
 
+      let matchStatus = true;
+      if (type === "active" && statusFilter !== "all") {
+        if (statusFilter === "active") matchStatus = !item.is_suspended;
+        if (statusFilter === "suspended") matchStatus = item.is_suspended;
+      }
+
       let matchDate = true;
       if (dateFilter !== "all" && createdAt) {
         const itemDate = new Date(createdAt);
@@ -281,7 +291,7 @@ export default function AdminClubsPage() {
         if (dateFilter === "month") matchDate = diffDays <= 30;
       }
 
-      return matchSearch && matchCategory && matchDate;
+      return matchSearch && matchCategory && matchStatus && matchDate;
     });
   };
 
@@ -297,9 +307,8 @@ export default function AdminClubsPage() {
   const suspendedClubsRaw = approvedClubsList.filter((c: any) => c.is_suspended);
 
   const pendingClubs = filterList(data.pending || [], "pending");
-  const activeClubs = filterList(activeClubsRaw, "active");
+  const activeClubs = filterList(approvedClubsList, "active");
   const rejectedClubs = filterList(data.rejected || [], "rejected");
-  const suspendedClubs = filterList(suspendedClubsRaw, "suspended");
 
   const initials = (name: string) => {
     return name ? name.split(" ").map(n => n[0]).join("").toUpperCase() : "C";
@@ -308,8 +317,8 @@ export default function AdminClubsPage() {
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Clubs"
-        description="Manage club applications and active campus communities."
+        title="Clubs Registry"
+        description="Review club requests, manage active clubs, and moderate registered student organizations."
         action={
           <AdminButton
             variant="secondary"
@@ -333,7 +342,16 @@ export default function AdminClubsPage() {
             <div className="text-xs font-semibold text-neutral-500">Pending Requests</div>
           </AdminCardContent>
         </AdminCard>
-
+ 
+        <AdminCard>
+          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
+            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
+              {approvedClubsList.length}
+            </div>
+            <div className="text-xs font-semibold text-neutral-500">Approved Clubs</div>
+          </AdminCardContent>
+        </AdminCard>
+ 
         <AdminCard>
           <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
             <div className="text-2xl font-bold font-mono text-[#0f0f10]">
@@ -342,22 +360,13 @@ export default function AdminClubsPage() {
             <div className="text-xs font-semibold text-neutral-500">Active Clubs</div>
           </AdminCardContent>
         </AdminCard>
-
+ 
         <AdminCard>
           <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
             <div className="text-2xl font-bold font-mono text-[#0f0f10]">
               {data.rejected?.length || 0}
             </div>
             <div className="text-xs font-semibold text-neutral-500">Rejected Requests</div>
-          </AdminCardContent>
-        </AdminCard>
-
-        <AdminCard>
-          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
-            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
-              {suspendedClubsRaw.length}
-            </div>
-            <div className="text-xs font-semibold text-neutral-500">Suspended Clubs</div>
           </AdminCardContent>
         </AdminCard>
       </div>
@@ -377,6 +386,16 @@ export default function AdminClubsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="text-xs bg-white/60 border border-black/5 rounded-full h-10 px-4 text-neutral-500 outline-none font-medium focus:bg-white hover:border-black/10 transition-all cursor-pointer"
+            >
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+
             {categories.length > 0 && (
               <select
                 value={categoryFilter}
@@ -419,19 +438,13 @@ export default function AdminClubsPage() {
             value="active"
             className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
           >
-            Active Clubs ({activeClubs.length})
+            Approved / Active ({activeClubs.length})
           </TabsTrigger>
           <TabsTrigger
             value="rejected"
             className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
           >
             Rejected ({rejectedClubs.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="suspended"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
-          >
-            Suspended ({suspendedClubs.length})
           </TabsTrigger>
         </TabsList>
 
@@ -593,6 +606,44 @@ export default function AdminClubsPage() {
                       </AdminButton>
 
                       <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedClubRequest(club);
+                          setDetailsModalOpen(true);
+                        }}
+                        leftIcon={<Eye className="w-3.5 h-3.5" />}
+                      >
+                        View Details
+                      </AdminButton>
+
+                      {club.is_suspended ? (
+                        <AdminButton
+                          variant="success"
+                          size="sm"
+                          onClick={() => {
+                            setUnsuspendingClub(club);
+                            setUnsuspendModalOpen(true);
+                          }}
+                          leftIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+                        >
+                          Unsuspend
+                        </AdminButton>
+                      ) : (
+                        <AdminButton
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setSuspendingClub(club);
+                            setSuspendModalOpen(true);
+                          }}
+                          leftIcon={<ShieldAlert className="w-3.5 h-3.5" />}
+                        >
+                          Suspend
+                        </AdminButton>
+                      )}
+
+                      <AdminButton
                         variant="destructive"
                         size="sm"
                         onClick={() => {
@@ -624,7 +675,7 @@ export default function AdminClubsPage() {
               {rejectedClubs.map((req: any) => (
                 <AdminCard key={req.id}>
                   <AdminCardContent className="p-5 flex flex-col md:flex-row justify-between md:items-center gap-4">
-                    <div className="space-y-1">
+                    <div className="space-y-1 flex-1">
                       <div className="flex items-center gap-2.5">
                         <h4 className="font-bold text-base text-[#0f0f10] font-dmserif">{req.club_name}</h4>
                         <AdminBadge status="rejected" />
@@ -637,59 +688,25 @@ export default function AdminClubsPage() {
                         </p>
                       )}
                     </div>
-                  </AdminCardContent>
-                </AdminCard>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Suspended Tab */}
-        <TabsContent value="suspended" className="pt-4 space-y-3">
-          {suspendedClubs.length === 0 ? (
-            <AdminEmptyState
-              icon={<ShieldAlert className="w-8 h-8 text-neutral-400" />}
-              title="No Suspended Clubs"
-              description="There are currently no suspended student organization accounts."
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {suspendedClubs.map((club: any) => (
-                <AdminCard key={club.user_id}>
-                  <AdminCardContent className="p-5 flex flex-col justify-between h-full space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 border border-black/5 bg-white">
-                          <AvatarFallback className="font-bold bg-neutral-100 text-neutral-600 text-xs">
-                            {initials(club.name || "C")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h4 className="font-bold text-sm text-[#0f0f10] font-dmserif">{club.name}</h4>
-                          <div className="text-xs text-neutral-400">@{club.username}</div>
-                        </div>
-                      </div>
-                      <AdminBadge status="rejected">Suspended</AdminBadge>
-                    </div>
-
-                    {club.suspension_reason && (
-                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100/60 p-2.5 rounded-xl italic">
-                        Reason: "{club.suspension_reason}"
-                      </p>
-                    )}
-
-                    <div className="flex items-center gap-2 border-t border-black/5 pt-3">
+                    <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedClubRequest(req);
+                          setDetailsModalOpen(true);
+                        }}
+                        leftIcon={<Eye className="w-3.5 h-3.5" />}
+                      >
+                        View Details
+                      </AdminButton>
                       <AdminButton
                         variant="success"
                         size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          setUnsuspendingClub(club);
-                          setUnsuspendModalOpen(true);
-                        }}
-                        leftIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+                        onClick={() => handleApproveClub(req.id)}
+                        leftIcon={<Check className="w-3.5 h-3.5" />}
                       >
-                        Unsuspend Club
+                        Reconsider
                       </AdminButton>
                     </div>
                   </AdminCardContent>
