@@ -179,11 +179,12 @@ export default function AppLayout({
   const studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
+    { name: "Connect", href: "/connect", icon: MessageSquareIcon, special: true },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
   ].filter(item => {
     // Clubs can't see Communities/Connect
-    if (role === 'club' && item.name === 'Communities') return false;
+    if (role === 'club' && (item.name === 'Communities' || item.name === 'Connect')) return false;
     return true;
   });
 
@@ -192,6 +193,8 @@ export default function AppLayout({
   if (isAdmin && !isAdminRoute) {
     studentNavItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
   }
+
+  const navItems = studentNavItems;
 
   const adminNavItems: NavItem[] = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
