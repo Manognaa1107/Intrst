@@ -176,16 +176,20 @@ export default function AppLayout({
     roleRequired?: string[];
   }
 
-  const studentNavItems: NavItem[] = [
+  let studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
-  ].filter(item => {
-    // Clubs can't see Communities/Connect
-    if (role === 'club' && item.name === 'Communities') return false;
-    return true;
-  });
+  ];
+
+  if (role === "club") {
+    studentNavItems = [
+      { name: "Dashboard", href: "/club-dashboard", icon: LayoutDashboardIcon },
+      { name: "Events", href: "/events", icon: CalendarIcon },
+      { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
+    ];
+  }
 
   // Add Admin item if role matches
   const isAdmin = ['super_admin', 'founder', 'moderator', 'junior_moderator'].includes(role);
@@ -218,7 +222,7 @@ export default function AppLayout({
       <div className="pointer-events-none absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
       {/* Top Bar for Mobile */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/40 backdrop-blur-xl border-b border-black/5 z-40 flex items-center justify-between px-4 md:hidden">
-        <Link href="/home" className="flex items-center gap-2">
+        <Link href={role === "club" ? "/club-dashboard" : "/home"} className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center font-dmserif font-bold text-white tracking-widest text-xs">
             intrst
           </div>
@@ -244,7 +248,7 @@ export default function AppLayout({
       {/* Side Nav for Desktop */}
       <aside className="fixed top-0 left-0 bottom-0 w-[80px] lg:w-[240px] bg-white/40 backdrop-blur-xl border-r border-black/5 z-40 hidden md:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-black/5 shrink-0">
-          <Link href="/home" className="flex items-center gap-2">
+          <Link href={role === "club" ? "/club-dashboard" : "/home"} className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-brand shrink-0 flex items-center justify-center font-dmserif font-bold text-white tracking-widest text-xs">
               i
             </div>
@@ -352,8 +356,8 @@ export default function AppLayout({
 
             {/* Links */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold text-neutral-400">
-              <Link href="/home" className="hover:text-black transition-colors">
-                Home
+              <Link href={role === "club" ? "/club-dashboard" : "/home"} className="hover:text-black transition-colors">
+                {role === "club" ? "Dashboard" : "Home"}
               </Link>
 
               <Link href="/canteens" className="hover:text-black transition-colors">

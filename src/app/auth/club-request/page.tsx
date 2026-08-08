@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star } from "lucide-react";
+import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star, Clock, XCircle } from "lucide-react";
 import Link from "next/link";
-// import { apiFetch } from "@/lib/apiClient"; // Removed for Phase 5A mock
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/apiClient";
 
 import { INTEREST_TAGS } from "@/constants/interestTags";
 
@@ -23,10 +24,22 @@ const buttonClickInteraction = {
 
 export default function RedesignedClubRequestPage() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [domainSearch, setDomainSearch] = useState("");
+
+  const [mode, setMode] = useState<"request" | "status_email" | "status_otp" | "status_result">("request");
+  
+  const [statusEmail, setStatusEmail] = useState("");
+  const [statusOtp, setStatusOtp] = useState("");
+  const [statusResult, setStatusResult] = useState<{
+    status: string;
+    club_name: string;
+    created_at: string;
+    token?: string | null;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     club_name: "",
@@ -59,8 +72,10 @@ export default function RedesignedClubRequestPage() {
     setLoading(true);
     setError(null);
 
+    const normalizedEmail = formData.club_email.toLowerCase().trim();
+
     // Basic Validation
-    if (!formData.club_name || !formData.club_email || !formData.president_name) {
+    if (!formData.club_name || !normalizedEmail || !formData.president_name) {
       setError("Club name, email, and president name are required.");
       setLoading(false);
       return;
@@ -73,12 +88,109 @@ export default function RedesignedClubRequestPage() {
     }
 
     try {
-      // Phase 5A: Simulate network request instead of calling Supabase
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // await apiFetch("/auth/club-request", { ... });
+      // Check for existing request with this email
+      const { data: existing, error: checkError } = await supabase
+        .from("club_requests")
+        .select("id, status")
+        .eq("club_email", normalizedEmail)
+        .maybeSingle();
+
+      if (checkError) throw new Error(checkError.message);
+
+      if (existing) {
+        if (existing.status === "pending") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        if (existing.status === "approved") {
+          setError("This club email has already been approved. Please contact the admin if you need assistance.");
+          setLoading(false);
+          return;
+        }
+        // status === 'rejected': delete old record to allow resubmission
+        const { error: deleteError } = await supabase
+          .from("club_requests")
+          .delete()
+          .eq("id", existing.id);
+        if (deleteError) throw new Error(deleteError.message);
+      }
+
+      // Insert into public.club_requests
+      const { error: insertError } = await supabase
+        .from("club_requests")
+        .insert({
+          club_name: formData.club_name.trim(),
+          club_email: normalizedEmail,
+          president_name: formData.president_name.trim(),
+          category: selectedDomains.join(", "),
+          description: formData.description.trim(),
+          status: "pending",
+        });
+
+      if (insertError) {
+        // Unique constraint violation (race condition)
+        if (insertError.code === "23505") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        throw new Error(insertError.message);
+      }
+
       router.push('/auth/club-request/submitted');
     } catch (err: any) {
       setError(err.message || "An error occurred while submitting your request.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendStatusOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statusEmail.trim()) {
+      setError("Please enter your club email.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch("/auth/club-status/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: statusEmail }),
+      });
+      
+      toast.success(data.message); // Generic success message for privacy
+      setMode("status_otp");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyStatusOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statusOtp.trim()) {
+      setError("Please enter the verification code.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch("/auth/club-status/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: statusEmail, otp: statusOtp }),
+      });
+      
+      if (data.session) {
+        await supabase.auth.setSession(data.session);
+      }
+
+      setStatusResult(data);
+      setMode("status_result");
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -155,13 +267,20 @@ export default function RedesignedClubRequestPage() {
             <CardHeader className="p-0 mb-8 text-center sm:text-left">
               <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm mb-3 mx-auto sm:mx-0">i</div>
               <CardTitle className="text-2xl font-bold tracking-tight text-[#0f0f10] mb-1.5">
-                Register Your <span className="font-serif italic font-normal text-[#505f78]">Club</span>
+                {mode === "request" && <>Register Your <span className="font-serif italic font-normal text-[#505f78]">Club</span></>}
+                {mode !== "request" && <>Check Request <span className="font-serif italic font-normal text-[#505f78]">Status</span></>}
               </CardTitle>
-              <CardDescription className="text-neutral-500 text-xs font-medium">Please provide your club details for manual verification.</CardDescription>
+              <CardDescription className="text-neutral-500 text-xs font-medium">
+                {mode === "request" && "Please provide your club details for manual verification."}
+                {mode === "status_email" && "Enter the email you used to request your club."}
+                {mode === "status_otp" && "Enter the verification code sent to your email."}
+                {mode === "status_result" && "Your current request status is displayed below."}
+              </CardDescription>
             </CardHeader>
 
             <CardContent className="p-0">
-              <form onSubmit={handleRequest} className="space-y-6">
+              {mode === "request" && (
+                <form onSubmit={handleRequest} className="space-y-6">
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
                     {error}
@@ -318,7 +437,146 @@ export default function RedesignedClubRequestPage() {
                     )}
                   </Button>
                 </motion.div>
+                
+                <div className="pt-4 flex justify-center">
+                  <button 
+                    type="button" 
+                    onClick={() => { setError(null); setMode("status_email"); }}
+                    className="text-xs text-[#855300] font-bold underline hover:text-black transition-colors"
+                  >
+                    Already submitted a request? Check Request Status
+                  </button>
+                </div>
               </form>
+              )}
+
+              {mode === "status_email" && (
+                <form onSubmit={handleSendStatusOtp} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="statusEmail" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
+                    <Input
+                      id="statusEmail"
+                      type="email"
+                      placeholder="club@gitam.in"
+                      value={statusEmail}
+                      onChange={(e) => setStatusEmail(e.target.value)}
+                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                      required
+                    />
+                  </div>
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : "Send Verification Code"}
+                    </Button>
+                  </motion.div>
+                  <div className="pt-4 flex justify-center">
+                    <button type="button" onClick={() => { setError(null); setMode("request"); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Back to New Request
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {mode === "status_otp" && (
+                <form onSubmit={handleVerifyStatusOtp} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="statusOtp" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Verification Code</Label>
+                    <Input
+                      id="statusOtp"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      value={statusOtp}
+                      onChange={(e) => setStatusOtp(e.target.value)}
+                      className="bg-white border-[#c5c6cd] rounded-xl h-11 text-center text-lg tracking-widest focus:border-black focus-visible:ring-0 text-[#0f0f10] font-bold"
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</> : "Verify & Check Status"}
+                    </Button>
+                  </motion.div>
+                  <div className="pt-4 flex justify-center">
+                    <button type="button" onClick={() => { setError(null); setMode("status_email"); setStatusOtp(""); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Use a different email
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {mode === "status_result" && statusResult && (
+                <div className="space-y-8 text-center py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0f0f10] mb-2">{statusResult.club_name}</h3>
+                    <p className="text-xs text-neutral-500">Submitted: {new Date(statusResult.created_at).toLocaleDateString()}</p>
+                  </div>
+
+                  {statusResult.status === "pending" && (
+                    <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <Clock className="w-8 h-8 text-amber-500" />
+                      <div>
+                        <h4 className="font-bold text-amber-800 text-sm">Under Review</h4>
+                        <p className="text-xs text-amber-700/80 mt-1">Your club request is currently under review by our admin team.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "rejected" && (
+                    <div className="bg-rose-50 border border-rose-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <XCircle className="w-8 h-8 text-rose-500" />
+                      <div>
+                        <h4 className="font-bold text-rose-800 text-sm">Not Approved</h4>
+                        <p className="text-xs text-rose-700/80 mt-1">Your club request was not approved.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "approved" && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                      <div>
+                        <h4 className="font-bold text-emerald-800 text-sm">Approved!</h4>
+                        <p className="text-xs text-emerald-700/80 mt-1">Your club request has been approved and is ready to be set up.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "approved" && statusResult.token && (
+                    <Link href={`/auth/club-setup?token=${statusResult.token}`}>
+                      <motion.div {...buttonClickInteraction} className="pt-4">
+                        <Button className="w-full bg-[#855300] hover:bg-[#6c4300] text-white font-bold h-12 rounded-full transition-all shadow-sm">
+                          Continue Club Setup
+                        </Button>
+                      </motion.div>
+                    </Link>
+                  )}
+
+                  <div className="pt-4 border-t border-black/5 flex justify-center">
+                    <button type="button" onClick={() => { setMode("request"); setStatusResult(null); setStatusEmail(""); setStatusOtp(""); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
             </CardContent>
 
             <CardFooter className="bg-transparent p-0 mt-8 flex justify-center items-center border-0">

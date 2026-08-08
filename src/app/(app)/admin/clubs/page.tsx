@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiFetch } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -74,12 +74,27 @@ export default function AdminClubsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [submittingReject, setSubmittingReject] = useState(false);
 
+  const [isAdminUser, setIsAdminUser] = useState<boolean | null>(null);
+
+  const ADMIN_ROLES = ['super_admin', 'founder', 'moderator', 'junior_moderator'];
+
   const fetchData = async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await apiFetch("/admin/clubs");
-      setData(res || { pending: [], approved: [], rejected: [] });
+      const { data: rows, error } = await supabase
+        .from("club_requests")
+        .select("id, club_name, club_email, president_name, category, description, status, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const all = rows || [];
+      setData({
+        pending: all.filter((r: any) => r.status === "pending"),
+        approved: all.filter((r: any) => r.status === "approved"),
+        rejected: all.filter((r: any) => r.status === "rejected"),
+      });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to load clubs data");
@@ -90,6 +105,30 @@ export default function AdminClubsPage() {
   };
 
   useEffect(() => {
+    // Verify current user is an admin before allowing any actions
+    const checkAdminRole = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          setIsAdminUser(false);
+          return;
+        }
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+        if (error || !profile) {
+          setIsAdminUser(false);
+          return;
+        }
+        setIsAdminUser(ADMIN_ROLES.includes(profile.role));
+      } catch {
+        setIsAdminUser(false);
+      }
+    };
+
+    checkAdminRole();
     fetchData();
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -103,9 +142,17 @@ export default function AdminClubsPage() {
   }, []);
 
   const handleApproveClub = async (id: string) => {
+    if (!isAdminUser) {
+      toast.error("Access denied. You do not have permission to perform this action.");
+      return;
+    }
     try {
-      await apiFetch(`/admin/club-requests/${id}/approve`, { method: "POST" });
-      toast.success("Club approved successfully!");
+      const { error } = await supabase
+        .from("club_requests")
+        .update({ status: "approved" })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Club request approved!");
       fetchData(true);
     } catch (err: any) {
       toast.error(err.message || "Failed to approve club.");
@@ -114,12 +161,17 @@ export default function AdminClubsPage() {
 
   const handleRejectClubSubmit = async () => {
     if (!rejectingRequest) return;
+    if (!isAdminUser) {
+      toast.error("Access denied. You do not have permission to perform this action.");
+      return;
+    }
     setSubmittingReject(true);
     try {
-      await apiFetch(`/admin/club-requests/${rejectingRequest.id}/reject`, { 
-        method: "POST",
-        body: JSON.stringify({ reason: rejectionReason })
-      });
+      const { error } = await supabase
+        .from("club_requests")
+        .update({ status: "rejected" })
+        .eq("id", rejectingRequest.id);
+      if (error) throw error;
       toast.success("Club request rejected.");
       setRejectModalOpen(false);
       setRejectingRequest(null);
