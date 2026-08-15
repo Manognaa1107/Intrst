@@ -33,29 +33,64 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-    // GITAM email validation
-    const domain = formData.email.split("@")[1]?.toLowerCase();
-
-    const isGitamEmail =
-      domain === "gitam.in" ||
-      domain.endsWith(".gitam.in") ||
-      domain === "gitam.edu" ||
-      domain.endsWith(".gitam.edu");
-
-    // Admin email bypass
-    const ADMIN_EMAIL = "yoshiwork046@gmail.com";
-
-    if (!isGitamEmail && formData.email.toLowerCase() !== ADMIN_EMAIL) {
-      setError("Only GITAM email addresses are allowed.");
-      setLoading(false);
-      return;
-    }
 
     try {
-      // 1. Check username availability
+      // ---------------------------------------------------------------
+      // STEP 1: Check admin_whitelist FIRST — before any domain check.
+      // If the email is present and active in public.admin_whitelist,
+      // it is allowed regardless of its domain (@gmail.com, etc.).
+      // ---------------------------------------------------------------
+      const normalizedEmail = formData.email.trim().toLowerCase();
+
+      let isAdmin = false;
+      try {
+        const { data: adminData, error: adminError } = await supabase
+          .from("admin_whitelist")
+          .select("email, full_name, designation, campus")
+          .eq("email", normalizedEmail)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (adminError) {
+          console.error("Error checking admin whitelist:", adminError);
+        }
+
+        if (adminData) {
+          isAdmin = true;
+          console.log("Admin email detected — bypassing GITAM restriction");
+        } else {
+          console.log("Student email detected — applying GITAM validation");
+        }
+      } catch (whitelistErr) {
+        console.error("Failed to check admin whitelist:", whitelistErr);
+        // If the whitelist check itself fails, fall through to GITAM validation
+        // to preserve student sign-up safety.
+      }
+
+      // ---------------------------------------------------------------
+      // STEP 2: If NOT an admin, enforce the GITAM domain restriction.
+      // ---------------------------------------------------------------
+      if (!isAdmin) {
+        const domain = normalizedEmail.split("@")[1] ?? "";
+        const isGitamEmail =
+          domain === "gitam.in" ||
+          domain.endsWith(".gitam.in") ||
+          domain === "gitam.edu" ||
+          domain.endsWith(".gitam.edu");
+
+        if (!isGitamEmail) {
+          setError("Only GITAM email addresses are allowed.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ---------------------------------------------------------------
+      // STEP 3: Check username availability (both flows).
+      // ---------------------------------------------------------------
       try {
         const usernameCheck = await apiFetch(`/auth/check-username/${formData.displayName}`, {
-          requireAuth: false
+          requireAuth: false,
         });
         if (!usernameCheck.available) {
           throw new Error("Username is already taken.");
@@ -65,33 +100,55 @@ export default function SignupPage() {
         if (checkErr.message === "Username is already taken.") throw checkErr;
       }
 
-      if (!isGitamEmail && formData.email.toLowerCase() !== ADMIN_EMAIL) {
-        setError("Only GITAM email addresses are allowed.");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Sign up with Supabase
+      // ---------------------------------------------------------------
+      // STEP 4: Create Supabase Auth account (sends OTP email).
+      // ---------------------------------------------------------------
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
       if (authError) throw authError;
 
-      sessionStorage.setItem("intrst_pending_profile", JSON.stringify({
-        name: formData.name,
-        username: formData.displayName,
-        email: formData.email,
-        timestamp: new Date().getTime()
-      }));
+      // ---------------------------------------------------------------
+      // STEP 5: Store pending profile data in sessionStorage so the
+      // OTP verify page can read it and initialize the profile.
+      // For admins we store an extra flag so verify/routeAfterAuth can
+      // direct them to /auth/admin/setup instead of /onboarding.
+      // ---------------------------------------------------------------
+      if (isAdmin) {
+        sessionStorage.setItem("admin_pending_profile", JSON.stringify({
+          name: formData.name,
+          displayName: formData.displayName,
+          email: formData.email,
+          timestamp: new Date().getTime(),
+        }));
+      } else {
+        sessionStorage.setItem("intrst_pending_profile", JSON.stringify({
+          name: formData.name,
+          username: formData.displayName,
+          email: formData.email,
+          timestamp: new Date().getTime(),
+        }));
+      }
 
-      // 4. Redirect to verify (Supabase signUp automatically sends the confirmation email/OTP code if enabled)
+      // ---------------------------------------------------------------
+      // STEP 6: Redirect to OTP verify.
+      // The verify page uses routeAfterAuth, which reads the role from
+      // the profile; for admins who have no profile yet it falls back to
+      // /onboarding — but admin_pending_profile is stored above so the
+      // admin setup page pre-fills the form.
+      // We pass isAdmin=true in the query string so verify can redirect
+      // to /auth/admin/setup for new admins before their profile exists.
+      // ---------------------------------------------------------------
       router.push(
-        `/verify?email=${encodeURIComponent(formData.email)}&type=signup`
+        `/verify?email=${encodeURIComponent(formData.email)}&type=signup${isAdmin ? "&isAdmin=true" : ""}`
       );
     } catch (err: any) {
       console.error("Signup process failed:", err);
-      const msg = typeof err === 'object' && err !== null ? (err.message || JSON.stringify(err)) : String(err);
+      const msg =
+        typeof err === "object" && err !== null
+          ? err.message || JSON.stringify(err)
+          : String(err);
       setError(msg || "An error occurred during signup.");
     } finally {
       setLoading(false);

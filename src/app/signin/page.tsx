@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 import { Inter } from "next/font/google";
+import { routeAfterAuth } from "@/lib/authRouting";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -82,7 +83,7 @@ export default function SignInPage() {
         if (error) throw error;
 
         if (data?.session) {
-          window.location.href = "/home";
+          await routeAfterAuth(router, data.session.access_token);
         }
       } else {
         await handleSendOtp();

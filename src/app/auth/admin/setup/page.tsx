@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Loader2, Upload, ArrowRight } from "lucide-react";
+import { Loader2, Upload, ArrowRight, UserCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/apiClient";
 
 const buttonClickInteraction = {
   whileHover: { scale: 1.02, y: -1 },
@@ -17,8 +19,16 @@ const buttonClickInteraction = {
 
 export default function AdminSetupPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
-  
+  const [error, setError] = useState<string | null>(null);
+
+  // Avatar state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     displayName: "",
@@ -33,6 +43,7 @@ export default function AdminSetupPage() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // Pre-fill form from sessionStorage set during admin signup
   useEffect(() => {
     const stored = sessionStorage.getItem("admin_pending_profile");
     if (stored) {
@@ -50,18 +61,118 @@ export default function AdminSetupPage() {
     }
   }, []);
 
+  // ---------------------------------------------------------------
+  // Handle avatar file selection — generate local preview only.
+  // The actual upload to Supabase Storage happens on form submit.
+  // ---------------------------------------------------------------
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be under 5 MB.");
+      return;
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  // ---------------------------------------------------------------
+  // Upload to Supabase Storage bucket: avatars
+  // Returns the public URL, or null if upload fails.
+  // ---------------------------------------------------------------
+  const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {
+    try {
+      setAvatarUploading(true);
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const filePath = `admin-avatars/${userId}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) {
+        console.error("[AdminSetup] Avatar upload failed:", uploadError.message);
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      return urlData?.publicUrl ?? null;
+    } catch (err) {
+      console.error("[AdminSetup] Unexpected upload error:", err);
+      return null;
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // ---------------------------------------------------------------
+  // Form submit:
+  //   1. Get the current Supabase session (user_id + token)
+  //   2. Upload avatar if chosen  → get public URL
+  //   3. Call /auth/initialize-profile to create the admin profile
+  //   4. Clear sessionStorage and navigate to /admin
+  // ---------------------------------------------------------------
   const handleSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Phase 6: Mock submission
+    setError(null);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      router.push("/admin");
+      // 1. Resolve the authenticated session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        setError("Session expired. Please sign in again.");
+        router.replace("/signin");
+        return;
+      }
+
+      const userId = session.user.id;
+      const accessToken = session.access_token;
+
+      // 2. Upload avatar (optional) — fallback to null if skipped or fails
+      let profileImageUrl: string | null = null;
+      if (avatarFile) {
+        profileImageUrl = await uploadAvatar(userId, avatarFile);
+        if (!profileImageUrl) {
+          // Non-fatal: log and continue without avatar
+          console.warn("[AdminSetup] Avatar upload failed — continuing without image.");
+        }
+      }
+
+      // 3. Create the admin profile via the existing backend endpoint.
+      //    The backend assigns role based on SUPER_ADMINS / MODERATORS env vars.
+      //    We send profile_image_url so it is stored in profiles.profile_image_url.
+      await apiFetch("/auth/initialize-profile", {
+        method: "POST",
+        token: accessToken,
+        body: JSON.stringify({
+          user_id: userId,
+          email: formData.email.trim().toLowerCase() || session.user.email,
+          name: formData.name.trim(),
+          username: formData.displayName.trim().toLowerCase(),
+          profile_image_url: profileImageUrl,
+        }),
+      });
+
+      // 4. Clean up and navigate
+      sessionStorage.removeItem("admin_pending_profile");
+      router.replace("/admin");
+    } catch (err: any) {
+      console.error("[AdminSetup] Setup failed:", err);
+      setError(err.message || "Setup failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Derived: initials for fallback avatar
+  const initials = (formData.name || formData.displayName || "A")[0]?.toUpperCase();
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
@@ -87,18 +198,70 @@ export default function AdminSetupPage() {
           </CardHeader>
 
           <CardContent className="p-0">
+            {error && (
+              <div className="mb-5 p-3 bg-red-50 border border-red-200/60 rounded-xl text-red-600 text-xs text-center font-medium">
+                {error}
+              </div>
+            )}
+
             <form onSubmit={handleSetup} className="space-y-6">
-              
-              {/* Profile Photo Upload */}
+
+              {/* ---- Profile Photo Upload ---- */}
               <div className="flex flex-col items-center sm:items-start gap-3">
                 <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Profile Photo (Optional)</Label>
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 border border-neutral-200">
-                    <Upload size={20} />
+
+                  {/* Preview or placeholder */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-16 h-16 rounded-full overflow-hidden border-2 border-dashed border-neutral-200 bg-neutral-50 flex items-center justify-center hover:border-black/20 transition-colors shrink-0 group relative"
+                    title="Click to upload photo"
+                  >
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt="Avatar preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-2xl font-bold text-neutral-300 group-hover:text-neutral-400 transition-colors select-none">
+                        {initials}
+                      </span>
+                    )}
+                    {/* Hover overlay */}
+                    <span className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Upload size={14} className="text-white" />
+                    </span>
+                  </button>
+
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-xs h-9 rounded-full font-semibold"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={avatarUploading}
+                    >
+                      {avatarUploading ? (
+                        <><Loader2 size={12} className="animate-spin mr-1.5" /> Uploading...</>
+                      ) : avatarPreview ? (
+                        "Change Photo"
+                      ) : (
+                        "Upload Photo"
+                      )}
+                    </Button>
+                    <p className="text-[10px] text-neutral-400 font-medium">JPG, PNG, WEBP · Max 5 MB</p>
                   </div>
-                  <Button type="button" variant="outline" className="text-xs h-9 rounded-full font-semibold">
-                    Upload Image
-                  </Button>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                 </div>
               </div>
 
@@ -208,7 +371,7 @@ export default function AdminSetupPage() {
                 <Button
                   className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || avatarUploading}
                 >
                   {loading ? (
                     <>
