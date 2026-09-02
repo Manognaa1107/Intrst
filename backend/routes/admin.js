@@ -207,6 +207,7 @@ router.get("/stats", checkJuniorModerator, async (req, res) => {
           timestamp: cr.created_at,
           metadata: { report_id: cr.id }
         });
+      });
     }
 
     // --- RECENT AUDIT LOG ACTIONS ---
@@ -355,9 +356,9 @@ router.post("/approve-user/:userId", checkAdmin, async (req, res) => {
     }
 
     // Log action
-    await logAuditAction(req.id, "APPROVE_USER", userId, { 
+    await logAuditAction(req.id, "APPROVE_USER", userId, {
       name: data[0].name,
-      role: data[0].role 
+      role: data[0].role
     });
 
     // Dispatch Notification Email
@@ -645,7 +646,7 @@ router.post("/set-role/:userId", checkSuperAdmin, async (req, res) => {
       .select();
 
     if (error) return res.status(500).json({ error: error.message });
-    
+
     // Log action
     await logAuditAction(req.id, "SET_ROLE", userId, { role, permissions });
 
@@ -661,9 +662,9 @@ router.delete("/remove-user/:userId", checkSuperAdmin, async (req, res) => {
   try {
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
     if (authError) return res.status(500).json({ error: authError.message });
-    
+
     await supabase.from("profiles").delete().eq("user_id", userId);
-    
+
     // Log action
     await logAuditAction(req.id, "REMOVE_USER", userId);
 
@@ -764,19 +765,19 @@ router.delete("/canteens/:id", checkModerator, async (req, res) => {
 
 // Accept a new community request
 router.post("/communities/approve/:id", checkModerator, async (req, res) => {
-    const { id } = req.params;
-    try {
-      const { data, error } = await supabase
-        .from("communities")
-        .update({ status: "active" })
-        .eq("id", id)
-        .select();
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from("communities")
+      .update({ status: "active" })
+      .eq("id", id)
+      .select();
 
-      if (error) return res.status(500).json({ error: error.message });
-      res.status(200).json({ message: "Community approved", community: data[0] });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json({ message: "Community approved", community: data[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Warn a user profile
@@ -786,7 +787,7 @@ router.post("/profile/warn/:userId", checkModerator, async (req, res) => {
   try {
     // Increment warnings_count
     const { data, error } = await supabase.rpc('increment_warning', { user_id_param: userId });
-    
+
     // Log action
     await logAuditAction(req.id, "WARN_USER", userId, { reason });
 

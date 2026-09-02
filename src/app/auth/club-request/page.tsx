@@ -31,7 +31,7 @@ export default function RedesignedClubRequestPage() {
   const [domainSearch, setDomainSearch] = useState("");
 
   const [mode, setMode] = useState<"request" | "status_email" | "status_otp" | "status_result">("request");
-  
+
   const [statusEmail, setStatusEmail] = useState("");
   const [statusOtp, setStatusOtp] = useState("");
   const [statusResult, setStatusResult] = useState<{
@@ -159,7 +159,7 @@ export default function RedesignedClubRequestPage() {
         method: "POST",
         body: JSON.stringify({ email: statusEmail }),
       });
-      
+
       toast.success(data.message); // Generic success message for privacy
       setMode("status_otp");
     } catch (err: any) {
@@ -182,7 +182,7 @@ export default function RedesignedClubRequestPage() {
         method: "POST",
         body: JSON.stringify({ email: statusEmail, otp: statusOtp }),
       });
-      
+
       if (data.session) {
         await supabase.auth.setSession(data.session);
       }
@@ -281,173 +281,173 @@ export default function RedesignedClubRequestPage() {
             <CardContent className="p-0">
               {mode === "request" && (
                 <form onSubmit={handleRequest} className="space-y-6">
-                {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
-                    {error}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Name</Label>
-                    <Input
-                      id="club_name"
-                      name="club_name"
-                      placeholder="e.g. Code Wizards"
-                      value={formData.club_name}
-                      onChange={handleChange}
-                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
-                    <Input
-                      id="club_email"
-                      name="club_email"
-                      type="email"
-                      placeholder="club@gitam.in"
-                      value={formData.club_email}
-                      onChange={handleChange}
-                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Name</Label>
-                    <Input
-                      id="president_name"
-                      name="president_name"
-                      placeholder="Full Name"
-                      value={formData.president_name}
-                      onChange={handleChange}
-                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone_number" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Phone (Optional)</Label>
-                    <Input
-                      id="phone_number"
-                      name="phone_number"
-                      type="tel"
-                      placeholder="Phone Number"
-                      value={formData.phone_number}
-                      onChange={handleChange}
-                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Multi-select Club Domains */}
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Domains (Select up to 5)</Label>
-                    <span className="text-[10px] font-bold text-[#855300] tracking-wide">
-                      {selectedDomains.length} / 5 selected
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-0.5 mb-3">
-                    {INTEREST_TAGS.slice(0, 6).map((item) => {
-                      const domain = item.tag;
-                      const isSelected = selectedDomains.includes(domain);
-                      return (
-                        <button
-                          type="button"
-                          key={domain}
-                          onClick={() => handleDomainToggle(domain)}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${isSelected
-                            ? "bg-black border-black text-white shadow-sm"
-                            : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
-                            }`}
-                        >
-                          {domain}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <Input
-                    placeholder="Search more domains..."
-                    value={domainSearch}
-                    onChange={(e) => setDomainSearch(e.target.value)}
-                    className="bg-white border-[#c5c6cd] rounded-xl h-10 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                  />
-
-                  {domainSearch.trim().length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 max-h-[140px] overflow-y-auto pr-1 hide-scrollbar">
-                      {INTEREST_TAGS.slice(6)
-                        .filter(d => d.tag.toLowerCase().includes(domainSearch.toLowerCase()))
-                        .map((item) => {
-                          const domain = item.tag;
-                          const isSelected = selectedDomains.includes(domain);
-                          return (
-                            <button
-                              type="button"
-                              key={domain}
-                              onClick={() => handleDomainToggle(domain)}
-                              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 flex items-center gap-1.5 ${isSelected
-                                ? "bg-black border-black text-white shadow-sm"
-                                : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
-                                }`}
-                            >
-                              {domain}
-                            </button>
-                          );
-                        })}
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
                     </div>
                   )}
-                </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Short Description</Label>
-                    <span className="text-[10px] font-bold text-[#855300] tracking-wide">
-                      {formData.description.length} / 200
-                    </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Name</Label>
+                      <Input
+                        id="club_name"
+                        name="club_name"
+                        placeholder="e.g. Code Wizards"
+                        value={formData.club_name}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
+                      <Input
+                        id="club_email"
+                        name="club_email"
+                        type="email"
+                        placeholder="club@gitam.in"
+                        value={formData.club_email}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
                   </div>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Briefly describe your club's mission and regular activities..."
-                    value={formData.description}
-                    onChange={handleChange}
-                    className="bg-white border-[#c5c6cd] rounded-xl min-h-[100px] focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                  />
-                </div>
 
-                <motion.div {...buttonClickInteraction} className="pt-2">
-                  <Button
-                    className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
-                    type="submit"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting Request...
-                      </>
-                    ) : (
-                      <>
-                        Submit Club Request
-                      </>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Name</Label>
+                      <Input
+                        id="president_name"
+                        name="president_name"
+                        placeholder="Full Name"
+                        value={formData.president_name}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone_number" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Phone (Optional)</Label>
+                      <Input
+                        id="phone_number"
+                        name="phone_number"
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={formData.phone_number}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Multi-select Club Domains */}
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Domains (Select up to 5)</Label>
+                      <span className="text-[10px] font-bold text-[#855300] tracking-wide">
+                        {selectedDomains.length} / 5 selected
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-0.5 mb-3">
+                      {INTEREST_TAGS.slice(0, 6).map((item) => {
+                        const domain = item.tag;
+                        const isSelected = selectedDomains.includes(domain);
+                        return (
+                          <button
+                            type="button"
+                            key={domain}
+                            onClick={() => handleDomainToggle(domain)}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${isSelected
+                              ? "bg-black border-black text-white shadow-sm"
+                              : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
+                              }`}
+                          >
+                            {domain}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <Input
+                      placeholder="Search more domains..."
+                      value={domainSearch}
+                      onChange={(e) => setDomainSearch(e.target.value)}
+                      className="bg-white border-[#c5c6cd] rounded-xl h-10 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                    />
+
+                    {domainSearch.trim().length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-2 max-h-[140px] overflow-y-auto pr-1 hide-scrollbar">
+                        {INTEREST_TAGS.slice(6)
+                          .filter(d => d.tag.toLowerCase().includes(domainSearch.toLowerCase()))
+                          .map((item) => {
+                            const domain = item.tag;
+                            const isSelected = selectedDomains.includes(domain);
+                            return (
+                              <button
+                                type="button"
+                                key={domain}
+                                onClick={() => handleDomainToggle(domain)}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 flex items-center gap-1.5 ${isSelected
+                                  ? "bg-black border-black text-white shadow-sm"
+                                  : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
+                                  }`}
+                              >
+                                {domain}
+                              </button>
+                            );
+                          })}
+                      </div>
                     )}
-                  </Button>
-                </motion.div>
-                
-                <div className="pt-4 flex justify-center">
-                  <button 
-                    type="button" 
-                    onClick={() => { setError(null); setMode("status_email"); }}
-                    className="text-xs text-[#855300] font-bold underline hover:text-black transition-colors"
-                  >
-                    Already submitted a request? Check Request Status
-                  </button>
-                </div>
-              </form>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Short Description</Label>
+                      <span className="text-[10px] font-bold text-[#855300] tracking-wide">
+                        {formData.description.length} / 200
+                      </span>
+                    </div>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Briefly describe your club's mission and regular activities..."
+                      value={formData.description}
+                      onChange={handleChange}
+                      className="bg-white border-[#c5c6cd] rounded-xl min-h-[100px] focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                    />
+                  </div>
+
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting Request...
+                        </>
+                      ) : (
+                        <>
+                          Submit Club Request
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  <div className="pt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => { setError(null); setMode("status_email"); }}
+                      className="text-xs text-[#855300] font-bold underline hover:text-black transition-colors"
+                    >
+                      Already submitted a request? Check Request Status
+                    </button>
+                  </div>
+                </form>
               )}
 
               {mode === "status_email" && (
@@ -560,8 +560,8 @@ export default function RedesignedClubRequestPage() {
                     </div>
                   )}
 
-                  {statusResult.status === "approved" && statusResult.token && (
-                    <Link href={`/auth/club-setup?token=${statusResult.token}`}>
+                  {statusResult.status === "approved" && (
+                    <Link href={statusResult.token ? `/auth/club-setup?token=${statusResult.token}` : `/auth/club-setup`}>
                       <motion.div {...buttonClickInteraction} className="pt-4">
                         <Button className="w-full bg-[#855300] hover:bg-[#6c4300] text-white font-bold h-12 rounded-full transition-all shadow-sm">
                           Continue Club Setup

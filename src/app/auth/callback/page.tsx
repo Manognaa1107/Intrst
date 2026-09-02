@@ -37,9 +37,21 @@ export default function AuthCallbackPage() {
           email.endsWith('@gitam.in') ||
           email.endsWith('@student.gitam.edu');
 
-        const ADMIN_EMAIL = 'saianupam4146@gmail.com';
+        let isAdmin = false;
+        if (!isGitam) {
+          const { data: adminData } = await supabase
+            .from('admin_whitelist')
+            .select('email')
+            .eq('email', email)
+            .eq('is_active', true)
+            .maybeSingle();
+            
+          if (adminData) {
+            isAdmin = true;
+          }
+        }
 
-        if (!isGitam && email !== ADMIN_EMAIL) {
+        if (!isGitam && !isAdmin) {
           await supabase.auth.signOut();
           alert('Only GITAM email addresses are allowed.');
           router.replace('/signup');

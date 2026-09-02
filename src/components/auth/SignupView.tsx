@@ -12,11 +12,11 @@ const buttonClickInteraction = {
 };
 
 export interface SignupFormData {
-  name: "";
-  displayName: "";
-  email: "";
-  password: "";
-  confirmPassword: "";
+  name: string;
+  displayName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
 }
 
 interface SignupViewProps {
