@@ -82,7 +82,7 @@ export async function routeAfterAuth(
        clubReq = req;
     }
 
-    // Check if user is associated with a Club in public.club_admins
+    // Check if user is associated with a Club in public.club_admins or public.clubs
     const userIdToUse = user?.id || profile?.user_id;
     let isClubAdmin = false;
     if (userIdToUse) {
@@ -92,6 +92,14 @@ export async function routeAfterAuth(
           .eq("user_id", userIdToUse)
           .maybeSingle();
        isClubAdmin = !!clubAdminData?.club_id;
+       if (!isClubAdmin) {
+          const { data: directClubData } = await supabase
+             .from("clubs")
+             .select("club_id")
+             .eq("created_by", userIdToUse)
+             .maybeSingle();
+          isClubAdmin = !!directClubData?.club_id;
+       }
     }
 
     if (!profile) {
@@ -119,7 +127,8 @@ export async function routeAfterAuth(
        // Profile exists, meaning Admin Setup is complete
        router.replace("/admin");
     } else if (role === "club" || isClubAdmin) {
-       if (isClubAdmin) {
+       const isCompletedClub = isClubAdmin || (role === "club" && !!profile.username);
+       if (isCompletedClub) {
           router.replace("/club-dashboard");
        } else if (clubReq?.status === 'approved' || profile.is_approved) {
           router.replace("/auth/club-setup");

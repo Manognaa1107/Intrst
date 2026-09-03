@@ -66,12 +66,36 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
       .eq("club_email", normalizedEmail)
       .maybeSingle();
 
+    // Check if user is already associated with an existing completed club account/profile
+    const { data: existingAdminCheck } = await supabase
+      .from("club_admins")
+      .select("club_id")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    const { data: existingClubByCreatorCheck } = await supabase
+      .from("clubs")
+      .select("club_id")
+      .eq("created_by", user_id)
+      .maybeSingle();
+
     // Check if profile already exists with role = club
     const { data: existingProfile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, username")
       .eq("user_id", user_id)
       .maybeSingle();
+
+    if (
+      existingAdminCheck?.club_id ||
+      existingClubByCreatorCheck?.club_id ||
+      (existingProfile && existingProfile.role === "club" && existingProfile.username)
+    ) {
+      return res.status(400).json({
+        error: "You already have a club account.",
+        alreadyExists: true
+      });
+    }
 
     if (adminData) {
       // Map designation to role, default to super_admin if unknown

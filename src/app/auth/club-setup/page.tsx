@@ -62,12 +62,62 @@ export default function ClubSetupPage() {
     other_links: ""
   });
 
+  const [alreadyHasAccount, setAlreadyHasAccount] = useState(false);
+
   // Verify session & pre-fill from club request
   useEffect(() => {
     async function loadInitialData() {
       try {
         setFetchingRequest(true);
+        setError(null);
         const { data: { session } } = await supabase.auth.getSession();
+        let tokenEmail: string | null = null;
+
+        // Verify setup token if present in URL params
+        if (token) {
+          try {
+            const parts = token.split(".");
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (payload.exp && Date.now() >= payload.exp * 1000) {
+                setError("Setup link is invalid or has expired. Please request a new link.");
+                setFetchingRequest(false);
+                return;
+              }
+              if (payload.purpose && payload.purpose !== "club-setup") {
+                setError("Invalid setup link.");
+                setFetchingRequest(false);
+                return;
+              }
+              if (payload.email) {
+                tokenEmail = payload.email.toLowerCase().trim();
+              }
+            } else {
+              setError("Invalid setup link format.");
+              setFetchingRequest(false);
+              return;
+            }
+          } catch {
+            setError("Invalid setup link.");
+            setFetchingRequest(false);
+            return;
+          }
+        }
+
+        // Check if token email belongs to an already completed club account
+        if (tokenEmail) {
+          const { data: profileByTokenEmail } = await supabase
+            .from("profiles")
+            .select("role, username")
+            .eq("email", tokenEmail)
+            .maybeSingle();
+
+          if (profileByTokenEmail && profileByTokenEmail.role === "club" && profileByTokenEmail.username) {
+            setAlreadyHasAccount(true);
+            setFetchingRequest(false);
+            return;
+          }
+        }
 
         if (!session?.user) {
           toast.error("No active authentication session. Please verify OTP or sign in.");
@@ -75,7 +125,27 @@ export default function ClubSetupPage() {
           return;
         }
 
-        const emailToUse = session.user.email || userEmail;
+        const emailToUse = session.user.email || userEmail || tokenEmail;
+        const currentUid = session.user.id;
+
+        // Check whether authenticated user is already associated with an existing completed club account/profile
+        const [adminRes, directClubRes, profileRes, profileByEmailRes] = await Promise.all([
+          supabase.from("club_admins").select("club_id").eq("user_id", currentUid).maybeSingle(),
+          supabase.from("clubs").select("club_id").eq("created_by", currentUid).maybeSingle(),
+          supabase.from("profiles").select("role, username").eq("user_id", currentUid).maybeSingle(),
+          emailToUse ? supabase.from("profiles").select("role, username").eq("email", emailToUse.toLowerCase().trim()).maybeSingle() : Promise.resolve({ data: null })
+        ]);
+
+        const isClubAdmin = !!adminRes.data?.club_id;
+        const isClubCreator = !!directClubRes.data?.club_id;
+        const isCompletedProfile = !!(profileRes.data && profileRes.data.role === "club" && profileRes.data.username);
+        const isCompletedByEmail = !!(profileByEmailRes.data && profileByEmailRes.data.role === "club" && profileByEmailRes.data.username);
+
+        if (isClubAdmin || isClubCreator || isCompletedProfile || isCompletedByEmail) {
+          setAlreadyHasAccount(true);
+          setFetchingRequest(false);
+          return;
+        }
 
         if (emailToUse) {
           const { data: req } = await supabase
@@ -85,6 +155,12 @@ export default function ClubSetupPage() {
             .maybeSingle();
 
           if (req) {
+            if (req.status !== "approved") {
+              setError("Forbidden: Club request is not approved.");
+              setFetchingRequest(false);
+              return;
+            }
+
             setFormData(prev => ({
               ...prev,
               name: req.club_name || "",
@@ -108,7 +184,7 @@ export default function ClubSetupPage() {
     }
 
     loadInitialData();
-  }, [router, userEmail]);
+  }, [router, userEmail, token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -265,7 +341,11 @@ export default function ClubSetupPage() {
       }
     } catch (err: any) {
       console.error("Club setup submission error:", err);
-      setError(err.message || "An error occurred during club setup. Please try again.");
+      if (err.message?.includes("already have a club account") || err.alreadyExists) {
+        setAlreadyHasAccount(true);
+      } else {
+        setError(err.message || "An error occurred during club setup. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -278,6 +358,44 @@ export default function ClubSetupPage() {
           <Loader2 className="w-8 h-8 animate-spin text-black" />
           <p className="text-xs font-semibold text-neutral-500">Loading Club Details...</p>
         </div>
+      </main>
+    );
+  }
+
+  if (alreadyHasAccount) {
+    return (
+      <main className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-[#faf9f6]">
+        {/* Background Decor */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+          <div className="absolute -right-40 bottom-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
+        </div>
+
+        <Card className="w-full max-w-[540px] border border-neutral-200/60 shadow-[0_24px_48px_rgba(0,0,0,0.03)] p-6 sm:p-8 rounded-[32px] bg-white relative z-10 text-center">
+          <div className="flex flex-col items-center justify-center space-y-4 py-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-2">
+              <ShieldCheck className="w-8 h-8" />
+            </div>
+
+            <CardTitle className="text-2xl font-bold tracking-tight text-[#0f0f10]">
+              You already have a club account.
+            </CardTitle>
+
+            <CardDescription className="text-xs font-medium text-neutral-500 max-w-md leading-relaxed">
+              Your club profile has already been set up. Please sign in to continue.
+            </CardDescription>
+
+            <div className="pt-4 w-full">
+              <Button
+                type="button"
+                onClick={() => router.push("/signin")}
+                className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all text-xs flex items-center justify-center gap-2 shadow-md"
+              >
+                Sign In <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
       </main>
     );
   }
