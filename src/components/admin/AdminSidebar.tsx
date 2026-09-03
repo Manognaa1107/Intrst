@@ -125,8 +125,7 @@ export function AdminSidebar({ onClose, onOpenChangePassword }: AdminSidebarProp
       {/* Bottom Profile Section Matching Student Sidebar */}
       <div className="p-4 border-t border-black/5">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 w-full hover:bg-white/60 p-2 rounded-xl border border-transparent hover:border-black/5 hover:shadow-sm transition-all text-left outline-none">
+          <DropdownMenuTrigger className="flex items-center gap-3 w-full hover:bg-white/60 p-2 rounded-xl border border-transparent hover:border-black/5 hover:shadow-sm transition-all text-left outline-none">
               {profileImageUrl ? (
                 <img
                   src={profileImageUrl}
@@ -148,8 +147,7 @@ export function AdminSidebar({ onClose, onOpenChangePassword }: AdminSidebarProp
                   {displayHandle}
                 </div>
               </div>
-            </button>
-          </DropdownMenuTrigger>
+            </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
             side="top"

@@ -168,6 +168,13 @@ export default function OnboardingPage() {
     gender
   );
 
+  // Role Safety: Redirect Club Admins to Club Dashboard
+  useEffect(() => {
+    if (role === "club") {
+      router.replace("/club-dashboard");
+    }
+  }, [role, router]);
+
   // Restore step from session
   useEffect(() => {
     const saved = sessionStorage.getItem("onboarding_step");

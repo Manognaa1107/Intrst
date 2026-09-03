@@ -772,10 +772,8 @@ function AddRoomDialog({ building, onSuccess, reporterName, isVerified, triggerT
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const availableRooms =
-    ICT_ROOMS[Number(floorNum) as keyof typeof ICT_ROOMS]?.[
-    roomType as keyof (typeof ICT_ROOMS)[1]
-    ] || [];
+  const availableRooms: string[] =
+    (ICT_ROOMS as any)[Number(floorNum)]?.[roomType] || [];
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

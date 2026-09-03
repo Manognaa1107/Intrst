@@ -43,7 +43,6 @@ export async function routeAfterAuth(
   token?: string | null
 ): Promise<void> {
   try {
-    // 1. Resolve the access token to use
     let accessToken = token ?? null;
 
     if (!accessToken) {
@@ -54,12 +53,10 @@ export async function routeAfterAuth(
     }
 
     if (!accessToken) {
-      // No session at all — send back to sign-in
       router.replace("/signin");
       return;
     }
 
-    // 2. Fetch the profile from our backend
     let profileData: any = null;
     try {
       profileData = await apiFetch("/auth/me", { token: accessToken });
@@ -68,27 +65,88 @@ export async function routeAfterAuth(
     }
 
     const profile = profileData?.profile ?? null;
-    const role: string = profile?.role ?? "";
+    const user = profileData?.user ?? null;
+    const email = user?.email?.toLowerCase().trim() || "";
+    
+    // Check if the user is in admin_whitelist
+    let isAdminWhitelist = false;
+    if (email) {
+       const { data: adminData } = await supabase.from('admin_whitelist').select('email').eq('email', email).eq('is_active', true).maybeSingle();
+       isAdminWhitelist = !!adminData;
+    }
 
-    // 3. Route based on profile existence and role
+    // Check if it's a club email
+    let clubReq = null;
+    if (email) {
+       const { data: req } = await supabase.from('club_requests').select('status').eq('club_email', email).maybeSingle();
+       clubReq = req;
+    }
+
+    // Check if user is associated with a Club in public.club_admins or public.clubs
+    const userIdToUse = user?.id || profile?.user_id;
+    let isClubAdmin = false;
+    if (userIdToUse) {
+       const { data: clubAdminData } = await supabase
+          .from("club_admins")
+          .select("club_id")
+          .eq("user_id", userIdToUse)
+          .maybeSingle();
+       isClubAdmin = !!clubAdminData?.club_id;
+       if (!isClubAdmin) {
+          const { data: directClubData } = await supabase
+             .from("clubs")
+             .select("club_id")
+             .eq("created_by", userIdToUse)
+             .maybeSingle();
+          isClubAdmin = !!directClubData?.club_id;
+       }
+    }
+
     if (!profile) {
-      // Profile does not exist yet — new user
-      // For admin sign-up flow the profile won't exist until /auth/admin/setup
-      // completes, but we have no reliable way to detect that from here alone.
-      // Regular new users → onboarding.
-      router.replace("/onboarding");
+      // No profile exists yet
+      if (isAdminWhitelist) {
+         router.replace("/auth/admin/setup");
+      } else if (isClubAdmin) {
+         router.replace("/club-dashboard");
+      } else if (clubReq) {
+         if (clubReq.status === 'approved') {
+            router.replace("/auth/club-setup"); 
+         } else {
+            router.replace("/auth/club-request/submitted");
+         }
+      } else {
+         router.replace("/onboarding");
+      }
       return;
     }
 
-    // Profile exists — route by role
+    // Profile exists
+    const role: string = profile.role ?? "";
+    
     if (isAdminRole(role)) {
-      router.replace("/admin");
+       // Profile exists, meaning Admin Setup is complete
+       router.replace("/admin");
+    } else if (role === "club" || isClubAdmin) {
+       const isCompletedClub = isClubAdmin || (role === "club" && !!profile.username);
+       if (isCompletedClub) {
+          router.replace("/club-dashboard");
+       } else if (clubReq?.status === 'approved' || profile.is_approved) {
+          router.replace("/auth/club-setup");
+       } else {
+          router.replace("/auth/club-request/submitted");
+       }
     } else {
-      router.replace("/home");
+       // Regular User
+       // Use department or year_of_study to infer if onboarding is complete
+       if (!profile.department && !profile.year_of_study) {
+          router.replace("/onboarding");
+       } else {
+          router.replace("/home");
+       }
     }
   } catch (err) {
     console.error("[routeAfterAuth] Unexpected error:", err);
-    // Safe fallback — let the app layout handle further redirects
+    // Safe fallback
     router.replace("/home");
   }
 }

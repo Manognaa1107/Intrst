@@ -166,8 +166,7 @@ export function AdminHeader({ onMenuToggle, onOpenChangePassword }: AdminHeaderP
           </button>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="relative w-8 h-8 rounded-full overflow-hidden border border-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 transition-all hover:border-black/20 flex shrink-0 items-center justify-center bg-white/50">
+            <DropdownMenuTrigger className="relative w-8 h-8 rounded-full overflow-hidden border border-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20 transition-all hover:border-black/20 flex shrink-0 items-center justify-center bg-white/50">
                 {profileImageUrl ? (
                   <img src={profileImageUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -177,7 +176,6 @@ export function AdminHeader({ onMenuToggle, onOpenChangePassword }: AdminHeaderP
                     </AvatarFallback>
                   </Avatar>
                 )}
-              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
