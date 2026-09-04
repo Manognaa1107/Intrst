@@ -148,7 +148,10 @@ export default function MyProfilePage() {
   }, [profile]);
 
   const fetchData = useCallback(async () => {
-    if (!user_id) return;
+    if (!user_id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [prof, postsRes, followersRes, followingRes] = await Promise.all([
