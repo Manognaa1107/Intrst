@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import SignupView, { SignupFormData } from "@/components/auth/SignupView";
+import { supabase } from "@/lib/supabase";
+import { apiFetch } from "@/lib/apiClient";
 
 export default function AdminSignupPage() {
   const router = useRouter();
@@ -34,21 +36,50 @@ export default function AdminSignupPage() {
     }
 
     try {
-      // Phase 6: Mock submission
-      // In the future:
+      const normalizedEmail = formData.email.trim().toLowerCase();
+
       // 1. Validate entered email against admin_whitelist table in Supabase.
-      // 2. If valid, proceed with supabase.auth.signUp()
-      
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      const { data: adminData, error: adminError } = await supabase
+        .from("admin_whitelist")
+        .select("email")
+        .eq("email", normalizedEmail)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (adminError || !adminData) {
+        throw new Error("This email is not authorized for an Admin account.");
+      }
+
+      // 2. Check username availability
+      try {
+        const usernameCheck = await apiFetch(`/auth/check-username/${formData.displayName}`, {
+          requireAuth: false,
+        });
+        if (!usernameCheck.available) {
+          throw new Error("Username is already taken.");
+        }
+      } catch (checkErr: any) {
+        if (checkErr.message === "Username is already taken.") throw checkErr;
+      }
+
+      // 3. Proceed with Supabase Signup
+      const { error: authError } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: formData.password,
+      });
+
+      if (authError) throw authError;
+
+      // 4. Set pending profile so verify page routes to admin setup
       sessionStorage.setItem("admin_pending_profile", JSON.stringify({
         name: formData.name,
         displayName: formData.displayName,
-        email: formData.email
+        email: normalizedEmail,
+        timestamp: new Date().getTime(),
       }));
       
-      // Navigate directly to Admin Setup page, bypassing OTP for now
-      router.push("/auth/admin/setup");
+      // Navigate to verify page with isAdmin flag
+      router.push(`/verify?email=${encodeURIComponent(normalizedEmail)}&type=signup&isAdmin=true`);
     } catch (err: any) {
       console.error("Admin signup process failed:", err);
       setError(err.message || "An error occurred during admin signup.");

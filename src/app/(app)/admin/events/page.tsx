@@ -45,7 +45,7 @@ export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("all");
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,7 +91,9 @@ export default function AdminEventsPage() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab");
-      if (tab && ["pending", "approved", "rejected", "past"].includes(tab)) {
+      if (tab === "past") {
+        setActiveTab("completed");
+      } else if (tab && ["all", "pending", "approved", "upcoming", "completed", "rejected"].includes(tab)) {
         setActiveTab(tab);
       }
       const q = params.get("search");
@@ -184,20 +186,21 @@ export default function AdminEventsPage() {
     return Array.from(orgs.entries());
   };
 
-  const filterList = (list: any[], type: "pending" | "approved" | "rejected" | "past") => {
+  const filterList = (list: any[], type: "all" | "pending" | "approved" | "upcoming" | "completed" | "rejected") => {
     const now = new Date();
     return list.filter((evt: any) => {
       const isApproved = evt.is_approved === true || evt.status === "approved";
       const isRejected = evt.status === "rejected";
       const isPast = isApproved && evt.started_at && new Date(evt.started_at) < now;
-      const isUpcomingApproved = isApproved && !isPast;
+      const isUpcomingApproved = isApproved && evt.started_at && new Date(evt.started_at) >= now;
       const isPending = !isApproved && !isRejected;
 
       // Filter by tab type
       if (type === "pending" && !isPending) return false;
-      if (type === "approved" && !isUpcomingApproved) return false;
+      if (type === "approved" && !isApproved) return false;
+      if (type === "upcoming" && !isUpcomingApproved) return false;
+      if (type === "completed" && !isPast) return false;
       if (type === "rejected" && !isRejected) return false;
-      if (type === "past" && !isPast) return false;
 
       // Search query
       const matchesSearch = searchQuery === "" ||
@@ -228,20 +231,17 @@ export default function AdminEventsPage() {
   }
 
   const organizers = getOrganizers();
-  const pendingEvents = filterList(events, "pending");
-  const approvedEvents = filterList(events, "approved");
-  const rejectedEvents = filterList(events, "rejected");
-  const pastEvents = filterList(events, "past");
 
-  const upcomingCount = events.filter(e => {
-    const isApproved = e.is_approved === true || e.status === "approved";
-    return isApproved && e.started_at && new Date(e.started_at) > new Date();
-  }).length;
+  const getFilteredCountForStatus = (type: "all" | "pending" | "approved" | "upcoming" | "completed" | "rejected") => {
+    return filterList(events, type).length;
+  };
+
+  const currentList = filterList(events, activeTab as any);
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
-        title="Events"
+        title="Events Management"
         description="Review and manage campus events submitted to intrst."
         action={
           <AdminButton
@@ -255,45 +255,6 @@ export default function AdminEventsPage() {
           </AdminButton>
         }
       />
-
-      {/* Top summary grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <AdminCard>
-          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
-            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
-              {events.filter(e => !e.is_approved && e.status !== "rejected").length}
-            </div>
-            <div className="text-xs font-semibold text-neutral-500">Pending Events</div>
-          </AdminCardContent>
-        </AdminCard>
-
-        <AdminCard>
-          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
-            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
-              {events.filter(e => e.is_approved || e.status === "approved").length}
-            </div>
-            <div className="text-xs font-semibold text-neutral-500">Approved Events</div>
-          </AdminCardContent>
-        </AdminCard>
-
-        <AdminCard>
-          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
-            <div className="text-2xl font-bold font-mono text-[#0f0f10]">
-              {events.filter(e => e.status === "rejected").length}
-            </div>
-            <div className="text-xs font-semibold text-neutral-500">Rejected Events</div>
-          </AdminCardContent>
-        </AdminCard>
-
-        <AdminCard>
-          <AdminCardContent className="p-5 flex flex-col justify-between space-y-2">
-            <div className="text-2xl font-bold font-mono text-[#0f0f10] text-[#855300]">
-              {upcomingCount}
-            </div>
-            <div className="text-xs font-semibold text-neutral-500">Upcoming Events</div>
-          </AdminCardContent>
-        </AdminCard>
-      </div>
 
       {/* Filters bar */}
       <AdminCard>
@@ -339,205 +300,220 @@ export default function AdminEventsPage() {
         </AdminCardContent>
       </AdminCard>
 
-      {/* Tabs */}
-      <Tabs defaultValue="pending" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {/* Tabs list triggers row */}
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
         <TabsList className="bg-[#f0ede6] border border-black/5 p-1 rounded-xl w-full sm:w-auto flex overflow-x-auto gap-1">
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            All ({getFilteredCountForStatus("all")})
+          </TabsTrigger>
           <TabsTrigger
             value="pending"
             className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
           >
-            Pending ({pendingEvents.length})
+            Pending Review ({getFilteredCountForStatus("pending")})
           </TabsTrigger>
           <TabsTrigger
             value="approved"
             className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
           >
-            Approved ({approvedEvents.length})
+            Approved ({getFilteredCountForStatus("approved")})
+          </TabsTrigger>
+          <TabsTrigger
+            value="upcoming"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            Upcoming ({getFilteredCountForStatus("upcoming")})
+          </TabsTrigger>
+          <TabsTrigger
+            value="completed"
+            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
+          >
+            Completed ({getFilteredCountForStatus("completed")})
           </TabsTrigger>
           <TabsTrigger
             value="rejected"
             className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
           >
-            Rejected ({rejectedEvents.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="past"
-            className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-600 rounded-lg text-xs font-semibold py-2 px-4 flex-1 sm:flex-initial"
-          >
-            Past Events ({pastEvents.length})
+            Rejected ({getFilteredCountForStatus("rejected")})
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab content helper */}
-        {["pending", "approved", "rejected", "past"].map((tabName) => {
-          const list = 
-            tabName === "pending" ? pendingEvents : 
-            tabName === "approved" ? approvedEvents : 
-            tabName === "rejected" ? rejectedEvents : pastEvents;
+        <div className="w-full">
+          {currentList.length === 0 ? (
+            <AdminEmptyState
+              insideCard={false}
+              icon={<Calendar className="w-8 h-8 text-neutral-400" />}
+              title="No events found"
+              description="There are no events matching your current filters."
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {currentList.map((evt: any) => {
+                const isApproved = evt.is_approved === true || evt.status === "approved";
+                const isRejected = evt.status === "rejected";
+                const isPast = isApproved && evt.started_at && new Date(evt.started_at) < new Date();
+                const isUpcomingApproved = isApproved && !isPast;
+                const isPending = !isApproved && !isRejected;
 
-          return (
-            <TabsContent key={tabName} value={tabName} className="pt-4">
-              {list.length === 0 ? (
-                <AdminEmptyState
-                  icon={<Calendar className="w-8 h-8 text-neutral-400" />}
-                  title={`No ${tabName} events`}
-                  description="Everything is up to date."
-                />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {list.map((evt: any) => (
-                    <AdminCard key={evt.event_id} className="flex flex-col justify-between h-full">
-                      <div>
-                        {/* Event Poster / Image */}
-                        <div className="h-44 bg-gradient-to-br from-[#505f78]/10 to-[#855300]/5 border-b border-black/5 relative overflow-hidden flex items-center justify-center">
-                          {evt.poster_url ? (
-                            <img
-                              src={evt.poster_url}
-                              alt={evt.title}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
-                          ) : (
-                            <div className="text-neutral-300 flex flex-col items-center gap-1.5">
-                              <ImageIcon className="w-8 h-8" />
-                              <span className="text-[10px] uppercase font-bold tracking-widest">No Poster</span>
-                            </div>
-                          )}
-                          <div className="absolute top-3 right-3">
-                            <AdminBadge
-                              status={
-                                tabName === "pending" ? "pending" :
-                                tabName === "approved" ? "approved" :
-                                tabName === "rejected" ? "rejected" : "under_review"
-                              }
-                            >
-                              {tabName === "pending" ? "Pending" :
-                               tabName === "approved" ? "Approved" :
-                               tabName === "rejected" ? "Rejected" : "Completed"}
-                            </AdminBadge>
+                return (
+                  <AdminCard key={evt.event_id} className="flex flex-col justify-between h-full animate-fadeIn">
+                    <div>
+                      {/* Event Poster / Image */}
+                      <div className="h-44 bg-gradient-to-br from-[#505f78]/10 to-[#855300]/5 border-b border-black/5 relative overflow-hidden flex items-center justify-center">
+                        {evt.poster_url ? (
+                          <img
+                            src={evt.poster_url}
+                            alt={evt.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="text-neutral-300 flex flex-col items-center gap-1.5">
+                            <ImageIcon className="w-8 h-8" />
+                            <span className="text-[10px] uppercase font-bold tracking-widest">No Poster</span>
                           </div>
-                        </div>
-
-                        <div className="p-5 space-y-3">
-                          <div>
-                            <h4 className="font-bold text-base text-[#0f0f10] font-dmserif leading-snug">{evt.title}</h4>
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-100 border border-black/5 rounded-full px-2.5 py-0.5 mt-2 inline-block">
-                              {evt.club_name}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
-                            {evt.description || "No description provided."}
-                          </p>
-
-                          <div className="text-[11px] text-neutral-400 space-y-1.5 border-t border-black/5 pt-3">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
-                              <span>{evt.location || "Main Campus"}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
-                              <span>{new Date(evt.started_at).toLocaleString()}</span>
-                            </div>
-                          </div>
+                        )}
+                        <div className="absolute top-3 right-3">
+                          <AdminBadge
+                            status={
+                              isPending ? "pending" :
+                              isUpcomingApproved ? "approved" :
+                              isRejected ? "rejected" : "under_review"
+                            }
+                          >
+                            {isPending ? "Pending" :
+                             isUpcomingApproved ? "Approved" :
+                             isRejected ? "Rejected" : "Completed"}
+                          </AdminBadge>
                         </div>
                       </div>
 
-                      <div className="p-5 pt-0 flex gap-2 border-t border-black/5 pt-4 bg-white/40">
-                        {tabName === "pending" && (
-                          <>
-                            <AdminButton
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => {
-                                setSelectedEvent(evt);
-                                setDetailsModalOpen(true);
-                              }}
-                              leftIcon={<Eye className="w-3.5 h-3.5" />}
-                            >
-                              Details
-                            </AdminButton>
-                            <AdminButton
-                              variant="success"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleApproveEvent(evt.event_id)}
-                              leftIcon={<Check className="w-3.5 h-3.5" />}
-                            >
-                              Approve
-                            </AdminButton>
-                            <AdminButton
-                              variant="destructive"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleRejectEvent(evt.event_id)}
-                              leftIcon={<X className="w-3.5 h-3.5" />}
-                            >
-                              Reject
-                            </AdminButton>
-                          </>
+                      <div className="p-5 space-y-3">
+                        <div>
+                          <h4 className="font-bold text-base text-[#0f0f10] font-dmserif leading-snug">{evt.title}</h4>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 bg-neutral-100 border border-black/5 rounded-full px-2.5 py-0.5 mt-2 inline-block">
+                            {evt.club_name}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                          {evt.description || "No description provided."}
+                        </p>
+
+                        {isRejected && evt.rejection_reason && (
+                          <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100/60 p-2.5 rounded-xl italic mt-1.5">
+                            Reason: "{evt.rejection_reason}"
+                          </p>
                         )}
 
-                        {tabName === "approved" && (
-                          <>
-                            <AdminButton
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => router.push(`/events`)}
-                              leftIcon={<Eye className="w-3.5 h-3.5" />}
-                            >
-                              View
-                            </AdminButton>
-                            <AdminButton
-                              variant="secondary"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => handleEditOpen(evt)}
-                              leftIcon={<Edit2 className="w-3.5 h-3.5" />}
-                            >
-                              Edit
-                            </AdminButton>
-                            <AdminButton
-                              variant="destructive"
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => {
-                                setDeletingEvent(evt);
-                                setDeleteModalOpen(true);
-                              }}
-                              leftIcon={<X className="w-3.5 h-3.5" />}
-                            >
-                              Cancel
-                            </AdminButton>
-                          </>
-                        )}
+                        <div className="text-[11px] text-neutral-400 space-y-1.5 border-t border-black/5 pt-3">
+                          <div className="flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
+                            <span>{evt.location || "Main Campus"}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
+                            <span>{new Date(evt.started_at).toLocaleString()}</span>
+                          </div>
+                          {evt.created_at && (
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="w-3.5 h-3.5 text-neutral-300 shrink-0" />
+                              <span>Submitted: {new Date(evt.created_at).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                        {(tabName === "rejected" || tabName === "past") && (
+                    <div className="p-5 pt-0 flex gap-2 border-t border-black/5 pt-4 bg-white/40">
+                      <AdminButton
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedEvent(evt);
+                          setDetailsModalOpen(true);
+                        }}
+                        leftIcon={<Eye className="w-3.5 h-3.5" />}
+                      >
+                        Details
+                      </AdminButton>
+
+                      {isPending && (
+                        <>
+                          <AdminButton
+                            variant="success"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleApproveEvent(evt.event_id)}
+                            leftIcon={<Check className="w-3.5 h-3.5" />}
+                          >
+                            Approve
+                          </AdminButton>
                           <AdminButton
                             variant="destructive"
                             size="sm"
-                            className="w-full"
+                            className="flex-1"
+                            onClick={() => handleRejectEvent(evt.event_id)}
+                            leftIcon={<X className="w-3.5 h-3.5" />}
+                          >
+                            Reject
+                          </AdminButton>
+                        </>
+                      )}
+
+                      {isApproved && !isPast && (
+                        <>
+                          <AdminButton
+                            variant="secondary"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => handleEditOpen(evt)}
+                            leftIcon={<Edit2 className="w-3.5 h-3.5" />}
+                          >
+                            Edit
+                          </AdminButton>
+                          <AdminButton
+                            variant="destructive"
+                            size="sm"
+                            className="flex-1"
                             onClick={() => {
                               setDeletingEvent(evt);
                               setDeleteModalOpen(true);
                             }}
-                            leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                            leftIcon={<X className="w-3.5 h-3.5" />}
                           >
-                            Delete Record
+                            Cancel
                           </AdminButton>
-                        )}
-                      </div>
-                    </AdminCard>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          );
-        })}
+                        </>
+                      )}
+
+                      {(isRejected || isPast) && (
+                        <AdminButton
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            setDeletingEvent(evt);
+                            setDeleteModalOpen(true);
+                          }}
+                          leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                        >
+                          Delete Record
+                        </AdminButton>
+                      )}
+                    </div>
+                  </AdminCard>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </Tabs>
 
       {/* Details Modal */}

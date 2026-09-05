@@ -49,52 +49,108 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
     let isVerified = true;
     let requestData = null;
 
-    if (SUPER_ADMINS.includes(email.toLowerCase())) {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if they are in the admin_whitelist table
+    const { data: adminData } = await supabase
+      .from("admin_whitelist")
+      .select("designation")
+      .eq("email", normalizedEmail)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    // Check if an approved club request exists for this email
+    const { data: request } = await supabase
+      .from("club_requests")
+      .select("*")
+      .eq("club_email", normalizedEmail)
+      .maybeSingle();
+
+    // Check if user is already associated with an existing completed club account/profile
+    const { data: existingAdminCheck } = await supabase
+      .from("club_admins")
+      .select("club_id")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    const { data: existingClubByCreatorCheck } = await supabase
+      .from("clubs")
+      .select("club_id")
+      .eq("created_by", user_id)
+      .maybeSingle();
+
+    // Check if profile already exists with role = club
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("role, username")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    if (
+      existingAdminCheck?.club_id ||
+      existingClubByCreatorCheck?.club_id ||
+      (existingProfile && existingProfile.role === "club" && existingProfile.username)
+    ) {
+      return res.status(400).json({
+        error: "You already have a club account.",
+        alreadyExists: true
+      });
+    }
+
+    if (adminData) {
+      // Map designation to role, default to super_admin if unknown
+      const designation = (adminData.designation || "").toLowerCase();
+      if (designation.includes("founder")) {
+        initialRole = "founder";
+      } else if (designation.includes("moderator")) {
+        initialRole = "moderator";
+      } else {
+        initialRole = "super_admin";
+      }
+      isApproved = true;
+      isVerified = true;
+    } else if (SUPER_ADMINS.includes(normalizedEmail)) {
       initialRole = "founder";
       isApproved = true;
       isVerified = true;
-    } else if (MODERATORS.includes(email.toLowerCase())) {
+    } else if (MODERATORS.includes(normalizedEmail)) {
       initialRole = "moderator";
       isApproved = true;
       isVerified = true;
-    } else if (isClubEmail(email)) {
+    } else if (request?.status === "approved" || existingProfile?.role === "club" || isClubEmail(normalizedEmail)) {
       initialRole = "club";
-      isApproved = false; // Clubs MUST be manually approved
-      isVerified = false; // Stay unverified until approved/manual check
-
-      // Check if there is an approved request for this club email
-      const { data: request } = await supabase
-        .from("club_requests")
-        .select("*")
-        .eq("club_email", email.toLowerCase().trim())
-        .maybeSingle();
-
-      if (request && request.status === "approved") {
-        requestData = request;
-        isApproved = true;
-        isVerified = true;
-      } else {
-        return res.status(403).json({ error: "Forbidden: Club request is not approved." });
-      }
+      isApproved = true;
+      isVerified = true;
+      requestData = request;
+    } else if (request && request.status !== "approved") {
+      return res.status(403).json({ error: "Forbidden: Club request is not approved." });
     }
+
+    const clubMetadataObj = initialRole === "club" ? {
+      category: req.body.category || requestData?.category || "General",
+      description: req.body.description || requestData?.description || "",
+      president_name: requestData?.president_name || "",
+      social_links: req.body.social_links || {
+        instagram: req.body.instagram || "",
+        linkedin: req.body.linkedin || "",
+        website: req.body.website || "",
+        other: req.body.other_links || req.body.other || ""
+      },
+      ...(club_details || {})
+    } : (club_details || null);
 
     const profilePayload = {
       user_id,
       name: name || requestData?.club_name,
       username: username.toLowerCase().trim(),
-      email: email.toLowerCase().trim(),
       role: initialRole,
       is_verified: isVerified,
       is_approved: isApproved,
       ai_profile: aiProfile || null,
       phone: phone || requestData?.phone_number || null,
-      bio: requestData?.description || null,
-      club_metadata: initialRole === "club" ? {
-        category: requestData?.category || "General",
-        description: requestData?.description || "",
-        president_name: requestData?.president_name || "",
-        ...(club_details || {})
-      } : (club_details || null),
+      bio: req.body.description || requestData?.description || null,
+      profile_image_url: req.body.logo_url || req.body.profile_image_url || null,
+      club_metadata: clubMetadataObj,
       points: initialRole === "founder" ? 9999 : 0,
     };
 
@@ -105,15 +161,100 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
       .single();
 
     if (profileError) {
+      console.error("[initialize-profile] Operation: profiles.upsert | Table: profiles | Code:", profileError.code, "| Message:", profileError.message);
       if (profileError.code === '23505' && profileError.message.includes('username')) {
         return res.status(409).json({ error: "Username is already taken. Please choose another." });
       }
-      return res.status(500).json({ error: "Failed to initialize profile" });
+      return res.status(500).json({ error: `Failed to initialize profile: ${profileError.message}` });
+    }
+
+    // Handlers for Club Entity & Club Admin Relationship
+    let clubRecord = null;
+    if (initialRole === "club") {
+      try {
+        const clubName = name || requestData?.club_name || "Club";
+        const clubDesc = req.body.description || requestData?.description || "";
+        const clubLogo = req.body.logo_url || req.body.profile_image_url || null;
+
+        // 1. Check if user is already linked in public.club_admins
+        const { data: existingAdmin } = await supabase
+          .from("club_admins")
+          .select("club_id")
+          .eq("user_id", user_id)
+          .maybeSingle();
+
+        // 2. Check if a club already exists with created_by = user_id
+        const { data: existingClubByCreator } = await supabase
+          .from("clubs")
+          .select("*")
+          .eq("created_by", user_id)
+          .maybeSingle();
+
+        const targetClubId = existingAdmin?.club_id || existingClubByCreator?.club_id;
+
+        if (targetClubId) {
+          // Update existing public.clubs entry with valid columns
+          const { data: updatedClub, error: updateErr } = await supabase
+            .from("clubs")
+            .update({
+              club_name: clubName,
+              description: clubDesc,
+              logo_url: clubLogo,
+            })
+            .eq("club_id", targetClubId)
+            .select()
+            .maybeSingle();
+
+          if (updateErr) {
+            console.error("[initialize-profile] Operation: clubs.update | Table: clubs | Code:", updateErr.code, "| Message:", updateErr.message);
+          }
+          clubRecord = updatedClub || existingClubByCreator;
+
+          // Ensure link in club_admins exists
+          if (!existingAdmin) {
+            await supabase.from("club_admins").insert({
+              club_id: targetClubId,
+              user_id: user_id,
+              permission_level: "owner",
+            });
+          }
+        } else {
+          // Create new public.clubs entry with valid columns
+          const clubInsertPayload = {
+            club_name: clubName,
+            description: clubDesc,
+            logo_url: clubLogo,
+            created_by: user_id,
+          };
+
+          const { data: newClub, error: createClubErr } = await supabase
+            .from("clubs")
+            .insert(clubInsertPayload)
+            .select()
+            .single();
+
+          if (createClubErr) {
+            console.error("[initialize-profile] Operation: clubs.insert | Table: clubs | Code:", createClubErr.code, "| Message:", createClubErr.message);
+          } else if (newClub) {
+            clubRecord = newClub;
+            // Link user as owner in public.club_admins
+            const { error: adminLinkErr } = await supabase.from("club_admins").insert({
+              club_id: newClub.club_id,
+              user_id: user_id,
+              permission_level: "owner",
+            });
+            if (adminLinkErr) {
+              console.error("[initialize-profile] Operation: club_admins.insert | Table: club_admins | Code:", adminLinkErr.code, "| Message:", adminLinkErr.message);
+            }
+          }
+        }
+      } catch (clubErr) {
+        console.error("Error creating/linking club entity:", clubErr);
+      }
     }
 
     // Handle interests
     if (interests && Array.isArray(interests) && interests.length > 0) {
-      // Find existing interests
       const { data: existingInterests } = await supabase
         .from('interests')
         .select('*')
@@ -124,7 +265,6 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
         existingInterests.forEach(i => existingMap.set(i.interest, i.interest_id));
       }
 
-      // Identify missing interests
       const missing = interests.filter(i => !existingMap.has(i)).map(i => ({ interest: i }));
       let finalInterests = [...(existingInterests || [])];
 
@@ -139,7 +279,6 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
         }
       }
 
-      // Insert into user_interests
       const userInterests = finalInterests.map(i => ({
         user_id: user_id,
         interest_id: i.interest_id
@@ -152,7 +291,9 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
 
     res.status(200).json({
       message: "Profile initialized successfully",
-      profile
+      profile,
+      club: clubRecord,
+      club_id: clubRecord?.club_id || null
     });
   } catch (error) {
     console.error("Initialization error:", error);
@@ -163,20 +304,31 @@ router.post("/initialize-profile", verifyAuthLight, async (req, res) => {
 // CHECK USERNAME AVAILABILITY
 router.get("/check-username/:username", async (req, res) => {
   const { username } = req.params;
+  const target = username.toLowerCase().trim();
   try {
-    const { data, error } = await supabase
+    const { data: profileData } = await supabase
       .from("profiles")
       .select("username")
-      .eq("username", username.toLowerCase())
+      .eq("username", target)
       .maybeSingle();
 
-    if (error) {
-      return res.json({ available: true });
+    if (profileData) {
+      return res.json({ available: false });
     }
 
-    res.json({ available: !data });
+    const { data: clubData } = await supabase
+      .from("clubs")
+      .select("username")
+      .eq("username", target)
+      .maybeSingle();
+
+    if (clubData) {
+      return res.json({ available: false });
+    }
+
+    res.json({ available: true });
   } catch (error) {
-    res.json({ available: true }); // Assume available if error (e.g. not found)
+    res.json({ available: true }); // Fallback assume available if error
   }
 });
 
@@ -280,7 +432,7 @@ router.post("/club-status/send-otp", async (req, res) => {
 
     if (request) {
       console.log(`[Club Status] Calling Supabase signInWithOtp for: ${normalizedEmail}`);
-      
+
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: normalizedEmail
       });
@@ -346,7 +498,7 @@ router.post("/club-status/verify-otp", async (req, res) => {
     if (error || !request) {
       return res.status(404).json({ error: "Club request not found." });
     }
-    
+
     console.log(`[Club Status] Request status: ${request.status}`);
 
     let setupToken = null;

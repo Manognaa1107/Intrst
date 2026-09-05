@@ -13,6 +13,8 @@ import { FaInstagram, FaGithub } from "react-icons/fa";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
 
+import { RoleGuard } from "@/components/RoleGuard";
+
 function ProfileMenu({ profileImageUrl, name, username, user_id }: { profileImageUrl: string | null, name: string, username: string, user_id?: string }) {
   const router = useRouter();
   const { handleDeleteAccount, isDeleting } = useDeleteAccount(user_id);
@@ -179,6 +181,7 @@ export default function AppLayout({
   let studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
+    { name: "Connect", href: "/connect", icon: MessageSquareIcon, special: true },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
   ];
@@ -197,6 +200,7 @@ export default function AppLayout({
     studentNavItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
   }
 
+
   const adminNavItems: NavItem[] = [
     { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
     { name: "Clubs", href: "/admin/clubs", icon: ClipboardListIcon },
@@ -210,11 +214,16 @@ export default function AppLayout({
   const navItems = isAdminRoute ? adminNavItems : studentNavItems;
 
   if (isAdminRoute) {
-    return <ApprovalGuard>{children}</ApprovalGuard>;
+    return (
+      <RoleGuard>
+        <ApprovalGuard>{children}</ApprovalGuard>
+      </RoleGuard>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
+    <RoleGuard>
+      <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
       {/* Background blobs (soft beige) */}
       <div className="pointer-events-none absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
       <div className="pointer-events-none absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
@@ -560,5 +569,6 @@ export default function AppLayout({
         </div>
       )}
     </div>
+    </RoleGuard>
   );
 }

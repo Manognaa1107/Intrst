@@ -78,6 +78,32 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleApproveEvent = async (id: string) => {
+    try {
+      await apiFetch(`/events/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_approved: true, status: "approved" })
+      });
+      toast.success("Event approved and published!");
+      fetchData(true);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to approve event.");
+    }
+  };
+
+  const handleRejectEvent = async (id: string) => {
+    try {
+      await apiFetch(`/events/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_approved: false, status: "rejected" })
+      });
+      toast.success("Event request rejected.");
+      fetchData(true);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reject event.");
+    }
+  };
+
   const handleRemoveContent = async (contentId: string, contentType: string) => {
     try {
       await apiFetch(`/admin/remove-content/${contentId}`, {
@@ -172,17 +198,11 @@ export default function AdminDashboardPage() {
       description: "Flagged issues & safety flags",
       icon: <AlertCircle className="w-5 h-5 text-neutral-600" />,
       count: stats.totalReports.toLocaleString(),
-      href: "/admin/reports"
+      href: "/admin/reports?tab=open"
     }
   ];
 
-  const clubRequests = data?.pendingApprovals?.clubRequests || [];
-  const eventRequests = data?.pendingApprovals?.eventRequests || [];
-  const classroomReports = data?.pendingApprovals?.classroomReports || [];
-  const reportsList = data?.pendingApprovals?.reports || [];
   const recentActivity = data?.recentActivity || [];
-
-  const totalPendingCount = clubRequests.length + eventRequests.length + classroomReports.length + reportsList.length;
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -194,6 +214,20 @@ export default function AdminDashboardPage() {
         return <Calendar className="w-4 h-4 text-purple-600" />;
       case "classroom_report_submitted":
         return <Building2 className="w-4 h-4 text-teal-600" />;
+      case "user_verified":
+        return <ShieldCheck className="w-4 h-4 text-blue-600" />;
+      case "user_suspended":
+        return <ShieldCheck className="w-4 h-4 text-red-600" />;
+      case "club_approved":
+        return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+      case "club_rejected":
+        return <X className="w-4 h-4 text-red-600" />;
+      case "event_approved":
+        return <CheckCircle2 className="w-4 h-4 text-purple-600" />;
+      case "report_resolved":
+        return <CheckCircle2 className="w-4 h-4 text-neutral-600" />;
+      case "report_dismissed":
+        return <X className="w-4 h-4 text-neutral-400" />;
       default:
         return <Activity className="w-4 h-4 text-[#505f78]" />;
     }
@@ -204,7 +238,7 @@ export default function AdminDashboardPage() {
       {/* Admin Dashboard Title & Header */}
       <AdminPageHeader
         title="Admin Dashboard"
-        description="Platform management overview, campus statistics, pending approvals queue, and administrative activity logs."
+        description="Platform management overview, campus statistics, and administrative activity logs."
         action={
           <AdminButton
             variant="secondary"
@@ -226,6 +260,7 @@ export default function AdminDashboardPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, delay: idx * 0.02 }}
+            className="h-full"
           >
             <AdminCard
               hoverable
@@ -256,243 +291,46 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* Sections Below Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Pending Approvals Section */}
-        <div className="lg:col-span-7 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold font-dmserif text-[#0f0f10]">Pending Approvals</h2>
-              <p className="text-xs text-neutral-500 font-medium">Items requiring moderation & approval</p>
-            </div>
-            {totalPendingCount > 0 && (
-              <AdminBadge status="pending">{totalPendingCount} Pending</AdminBadge>
-            )}
+      {/* Recent Activity Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold font-dmserif text-[#0f0f10]">Recent Activity</h2>
+            <p className="text-xs text-neutral-500 font-medium">Administrative audit and platform event stream</p>
           </div>
-
-          <Tabs defaultValue="clubs" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="bg-[#f0ede6] border border-black/5 p-1 rounded-xl w-full sm:w-auto flex overflow-x-auto gap-1">
-              <TabsTrigger value="clubs" className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg flex-1 sm:flex-initial text-xs py-2 px-4 font-semibold">
-                Clubs ({clubRequests.length})
-              </TabsTrigger>
-              <TabsTrigger value="events" className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg flex-1 sm:flex-initial text-xs py-2 px-4 font-semibold">
-                Events ({eventRequests.length})
-              </TabsTrigger>
-              <TabsTrigger value="classrooms" className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg flex-1 sm:flex-initial text-xs py-2 px-4 font-semibold">
-                Classrooms ({classroomReports.length})
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="data-[state=active]:bg-white data-[state=active]:text-[#0f0f10] data-[state=active]:shadow-sm text-neutral-500 rounded-lg flex-1 sm:flex-initial text-xs py-2 px-4 font-semibold">
-                Reports ({reportsList.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="clubs" className="pt-4 space-y-3">
-              {clubRequests.length === 0 ? (
-                <AdminEmptyState
-                  icon={<ClipboardList className="w-8 h-8 text-neutral-400" />}
-                  title="No pending club requests"
-                  description="Everything is up to date."
-                />
-              ) : (
-                clubRequests.map((req: any) => (
-                  <AdminCard key={req.id}>
-                    <AdminCardContent className="p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-base text-[#0f0f10] font-dmserif">{req.club_name}</h4>
-                        <p className="text-xs text-neutral-500 mt-1">Requested by: {req.club_email}</p>
-                        {req.justification && (
-                          <p className="text-xs text-neutral-600 mt-2 italic bg-neutral-50 p-2.5 rounded-xl border border-black/5">
-                            "{req.justification}"
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                        <AdminButton
-                          onClick={() => handleApproveClub(req.id)}
-                          size="sm"
-                          variant="success"
-                          leftIcon={<Check className="w-3.5 h-3.5" />}
-                        >
-                          Approve
-                        </AdminButton>
-                        <AdminButton
-                          onClick={() => handleRejectClub(req.id)}
-                          size="sm"
-                          variant="destructive"
-                          leftIcon={<X className="w-3.5 h-3.5" />}
-                        >
-                          Reject
-                        </AdminButton>
-                      </div>
-                    </AdminCardContent>
-                  </AdminCard>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="events" className="pt-4 space-y-3">
-              {eventRequests.length === 0 ? (
-                <AdminEmptyState
-                  icon={<Calendar className="w-8 h-8 text-neutral-400" />}
-                  title="No pending event requests"
-                  description="Everything is up to date."
-                />
-              ) : (
-                eventRequests.map((evt: any) => (
-                  <AdminCard key={evt.event_id}>
-                    <AdminCardContent className="p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <h4 className="font-bold text-base text-[#0f0f10] font-dmserif">{evt.title}</h4>
-                        <p className="text-xs text-neutral-500 flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-neutral-400" /> {evt.location}
-                        </p>
-                        <p className="text-xs text-neutral-500 flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-neutral-400" /> {new Date(evt.started_at).toLocaleString()}
-                        </p>
-                        <p className="text-xs text-neutral-600 mt-2 line-clamp-2">{evt.description}</p>
-                      </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                        <AdminButton
-                          onClick={() => handleRemoveContent(evt.event_id, "event")}
-                          size="sm"
-                          variant="destructive"
-                          leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                        >
-                          Delete
-                        </AdminButton>
-                      </div>
-                    </AdminCardContent>
-                  </AdminCard>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="classrooms" className="pt-4 space-y-3">
-              {classroomReports.length === 0 ? (
-                <AdminEmptyState
-                  icon={<Building2 className="w-8 h-8 text-neutral-400" />}
-                  title="No active classroom reports"
-                  description="Everything is up to date."
-                />
-              ) : (
-                classroomReports.map((rpt: any) => {
-                  const roomInfo = rpt.classrooms ? `${rpt.classrooms.building_name} - ${rpt.classrooms.room_number}` : `Room #${rpt.classroom_id}`;
-                  return (
-                    <AdminCard key={rpt.id}>
-                      <AdminCardContent className="p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                        <div>
-                          <h4 className="font-bold text-base text-[#0f0f10] font-dmserif">{roomInfo}</h4>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            Status: <span className="font-bold capitalize text-teal-600">{rpt.status}</span>
-                          </p>
-                          <p className="text-xs text-neutral-500 flex items-center gap-1 mt-1">
-                            <Clock className="w-3.5 h-3.5 text-neutral-400" /> Expires: {new Date(rpt.expires_at).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                          <AdminButton
-                            onClick={() => router.push("/admin/classrooms")}
-                            size="sm"
-                            variant="secondary"
-                          >
-                            View Registry
-                          </AdminButton>
-                        </div>
-                      </AdminCardContent>
-                    </AdminCard>
-                  );
-                })
-              )}
-            </TabsContent>
-
-            <TabsContent value="reports" className="pt-4 space-y-3">
-              {reportsList.length === 0 ? (
-                <AdminEmptyState
-                  icon={<AlertCircle className="w-8 h-8 text-neutral-400" />}
-                  title="No reported content items"
-                  description="Everything is up to date."
-                />
-              ) : (
-                reportsList.map((rpt: any) => (
-                  <AdminCard key={rpt.id}>
-                    <AdminCardContent className="p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                      <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs font-semibold capitalize border-amber-200 text-amber-700 bg-amber-50 rounded-lg">
-                            {rpt.content_type || "Content"}
-                          </Badge>
-                          <span className="text-xs text-neutral-400">ID: {rpt.content_id}</span>
-                        </div>
-                        <p className="text-sm font-semibold text-[#0f0f10] mt-2 font-dmserif">Reason: {rpt.reason || "No reason given."}</p>
-                        <p className="text-xs text-neutral-500 mt-1">Reported by: {rpt.reporter_id || "Anonymous"}</p>
-                      </div>
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                        <AdminButton
-                          onClick={() => handleRemoveContent(rpt.content_id, rpt.content_type || "post")}
-                          size="sm"
-                          variant="destructive"
-                          leftIcon={<Trash2 className="w-3.5 h-3.5" />}
-                        >
-                          Remove
-                        </AdminButton>
-                        <AdminButton
-                          onClick={() => handleDismissReport(rpt.id)}
-                          size="sm"
-                          variant="secondary"
-                          leftIcon={<Check className="w-3.5 h-3.5" />}
-                        >
-                          Dismiss
-                        </AdminButton>
-                      </div>
-                    </AdminCardContent>
-                  </AdminCard>
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
+          <Activity className="w-4 h-4 text-[#505f78]" />
         </div>
 
-        {/* Recent Activity Section */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold font-dmserif text-[#0f0f10]">Recent Activity</h2>
-              <p className="text-xs text-neutral-500 font-medium">Administrative audit and platform event stream</p>
-            </div>
-            <Activity className="w-4 h-4 text-[#505f78]" />
-          </div>
-
-          <AdminCard>
-            <AdminCardContent className="p-5">
-              {recentActivity.length === 0 ? (
-                <AdminEmptyState
-                  insideCard={false}
-                  icon={<Activity className="w-7 h-7 text-neutral-400" />}
-                  title="No recent activity"
-                  description="Administrative activity will appear here."
-                />
-              ) : (
-                <div className="relative space-y-4 before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-px before:bg-black/5">
-                  {recentActivity.map((act: any, idx: number) => (
-                    <div key={act.id || idx} className="relative flex items-start gap-3 pl-1">
-                      <div className="w-7 h-7 rounded-full bg-white/60 border border-black/10 flex items-center justify-center shrink-0 z-10 shadow-sm">
-                        {getActivityIcon(act.type)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-[#0f0f10] leading-snug">
-                          {act.title}
-                        </p>
-                        <span className="text-[10px] text-neutral-400 font-medium">
-                          {act.timestamp ? new Date(act.timestamp).toLocaleString() : "Just now"}
-                        </span>
-                      </div>
+        <AdminCard>
+          <AdminCardContent className="p-5">
+            {recentActivity.length === 0 ? (
+              <AdminEmptyState
+                insideCard={false}
+                icon={<Activity className="w-7 h-7 text-neutral-400" />}
+                title="No recent activity"
+                description="Administrative activity will appear here."
+              />
+            ) : (
+              <div className="relative space-y-4 before:absolute before:left-3.5 before:top-3 before:bottom-3 before:w-px before:bg-black/5">
+                {recentActivity.map((act: any, idx: number) => (
+                  <div key={act.id || idx} className="relative flex items-start gap-3 pl-1">
+                    <div className="w-7 h-7 rounded-full bg-white/60 border border-black/10 flex items-center justify-center shrink-0 z-10 shadow-sm">
+                      {getActivityIcon(act.type)}
                     </div>
-                  ))}
-                </div>
-              )}
-            </AdminCardContent>
-          </AdminCard>
-        </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-[#0f0f10] leading-snug">
+                        {act.title}
+                      </p>
+                      <span className="text-[10px] text-neutral-400 font-medium">
+                        {act.timestamp ? new Date(act.timestamp).toLocaleString() : "Just now"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </AdminCardContent>
+        </AdminCard>
       </div>
     </div>
   );
